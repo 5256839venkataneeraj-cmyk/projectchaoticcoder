@@ -152,5 +152,9 @@ class RouteRepository(context: Context) {
         }
         return false
     }
+
+    suspend fun updateProfileInfo(username: String, studentId: String, hostelBlock: String, department: String) {
+        userProfileDao.updateProfileInfo(username, studentId, hostelBlock, department)
+    }
 }
 

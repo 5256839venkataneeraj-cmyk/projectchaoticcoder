@@ -30,6 +30,8 @@ import com.example.ui.challenges.ChallengesScreen
 import com.example.ui.challenges.ChallengesViewModel
 import com.example.ui.home.HomeScreen
 import com.example.ui.home.HomeViewModel
+import com.example.ui.profile.ProfileScreen
+import com.example.ui.profile.ProfileViewModel
 import com.example.ui.store.StoreScreen
 import com.example.ui.store.StoreViewModel
 import com.example.ui.studio.ColoringStudioScreen
@@ -118,6 +120,18 @@ fun MainScreen(
                             },
                             testTag = "nav_store"
                         )
+
+                        // Profile Tab
+                        val isProfile = currentRoute == Screen.Profile.route
+                        BottomNavItem(
+                            icon = if (isProfile) Icons.Filled.Person else Icons.Outlined.Person,
+                            label = "Profile",
+                            isSelected = isProfile,
+                            onClick = {
+                                navController.navigate(Screen.Profile.route)
+                            },
+                            testTag = "nav_profile"
+                        )
                     }
                 }
             }
@@ -139,7 +153,7 @@ fun MainScreen(
                         navController.navigate(Screen.Tracker.route)
                     },
                     onNavigateToProfile = {
-                        navController.navigate(Screen.Challenges.route)
+                        navController.navigate(Screen.Profile.route)
                     }
                 )
             }
@@ -191,6 +205,24 @@ fun MainScreen(
                     viewModel = storeVm,
                     onNavigateBack = {
                         navController.popBackStack()
+                    }
+                )
+            }
+
+            composable(Screen.Profile.route) {
+                val profileVm: ProfileViewModel = viewModel()
+                ProfileScreen(
+                    viewModel = profileVm,
+                    onNavigateToArtworks = {
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.Home.route) { inclusive = true }
+                        }
+                    },
+                    onNavigateToColourGallery = {
+                        navController.navigate(Screen.Store.route)
+                    },
+                    onNavigateToQuests = {
+                        navController.navigate(Screen.Challenges.route)
                     }
                 )
             }

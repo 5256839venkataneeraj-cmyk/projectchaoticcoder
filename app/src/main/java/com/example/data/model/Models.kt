@@ -125,7 +125,7 @@ data class CustomColorEntity(
 data class UserProfileEntity(
     @PrimaryKey
     val id: Int = 1,
-    val username: String = "Aarav Sharma",
+    val username: String = "James",
     val studentId: String = "21BCE1492",
     val hostelBlock: String = "Block D (Men's Hostel)",
     val department: String = "Computer Science & Engg",

@@ -110,6 +110,9 @@ interface UserProfileDao {
 
     @Query("UPDATE user_profile SET totalSteps = totalSteps + :steps, totalArtworks = totalArtworks + 1 WHERE id = 1")
     suspend fun recordCompletedWalk(steps: Int)
+
+    @Query("UPDATE user_profile SET username = :username, studentId = :studentId, hostelBlock = :hostelBlock, department = :department WHERE id = 1")
+    suspend fun updateProfileInfo(username: String, studentId: String, hostelBlock: String, department: String)
 }
 
 @Database(

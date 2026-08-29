@@ -8,4 +8,5 @@ sealed class Screen(val route: String, val title: String, val iconEmoji: String)
     }
     data object Challenges : Screen("challenges", "Quests", "🏆")
     data object Store : Screen("store", "Store", "🛍️")
+    data object Profile : Screen("profile", "Profile", "👤")
 }

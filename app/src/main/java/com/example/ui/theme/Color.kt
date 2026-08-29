@@ -32,5 +32,13 @@ val AccentTeal = Color(0xFF2A9D8F)
 val AccentAmber = Color(0xFFF4A261)
 
 val SoftMintPill = Color(0xFFDCEEE2)
+val SoftMintRecent = Color(0xFFE2F6EC)
+val SoftLavenderRecent = Color(0xFFEFEAFF)
+val SoftLogoutPill = Color(0xFFFDEFEF)
+val LogoutRed = Color(0xFFD32F2F)
+
+val AccountGradientStart = Color(0xFF7DE1C5)
+val AccountGradientEnd = Color(0xFFB4BFFC)
+
 val BlackPill = Color(0xFF19241E)
 val WhitePill = Color(0xFFFFFFFF)
