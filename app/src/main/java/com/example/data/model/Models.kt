@@ -17,24 +17,51 @@ data class WalkRouteEntity(
     val shapeName: String,
     val shapeCategory: String, // "Floral", "Ribbon", "Abstract", "Fauna", "Geometric"
     val pointsJson: String,    // serialized normalized (x,y) points
+    val rawGpsPathJson: String = "[]", // serialized list of raw GPS coordinates (lat, lng, alt, accuracy, speed)
     val blobsJson: String,     // serialized pastel organic blobs (x, y, radius, colorHex)
     val strokesJson: String,   // serialized stroke paths
     val stickersJson: String = "[]", // serialized landmark stickers
+    val collectionId: String = "campus_quad_series", // Collection category grouping
+    val rarityTier: String = "Common", // "Common", "Uncommon", "Rare", "Epic", "Legendary"
     val isFavorite: Boolean = false,
     val campusName: String = "VIT Campus",
     val artStyle: String = "Pastel Bloom",
     val createdAt: Long = System.currentTimeMillis()
 )
 
+@Entity(tableName = "art_collections")
+data class ArtCollectionEntity(
+    @PrimaryKey
+    val id: String, // e.g. "campus_quad_series"
+    val title: String,
+    val description: String,
+    val themeColorHex: String = "#639D75",
+    val bannerGradientStart: String = "#A5E6CF",
+    val bannerGradientEnd: String = "#BCC6FA",
+    val iconEmoji: String = "🎨",
+    val totalArtworks: Int = 0,
+    val totalDistanceKm: Double = 0.0,
+    val totalSteps: Int = 0,
+    val isFeatured: Boolean = false,
+    val createdAt: Long = System.currentTimeMillis()
+)
+
 data class PointF(
     val x: Float,
-    val y: Float
+    val y: Float,
+    val altitudeMeters: Double = 0.0,
+    val verticalDisplacement: Float = 0f,
+    val strokeThicknessMultiplier: Float = 1.0f,
+    val gradePercentage: Float = 0f
 )
 
 data class GpsCoordinate(
     val latitude: Double,
     val longitude: Double,
     val altitudeMeters: Double = 0.0,
+    val verticalDisplacementMeters: Double = 0.0,
+    val gradePercentage: Double = 0.0,
+    val strokeThicknessMultiplier: Float = 1.0f,
     val accuracyMeters: Float = 0f,
     val speedKmh: Double = 0.0,
     val timestamp: Long = System.currentTimeMillis()
@@ -125,7 +152,7 @@ data class CustomColorEntity(
 data class UserProfileEntity(
     @PrimaryKey
     val id: Int = 1,
-    val username: String = "James",
+    val username: String = "Neeraj",
     val studentId: String = "21BCE1492",
     val hostelBlock: String = "Block D (Men's Hostel)",
     val department: String = "Computer Science & Engg",

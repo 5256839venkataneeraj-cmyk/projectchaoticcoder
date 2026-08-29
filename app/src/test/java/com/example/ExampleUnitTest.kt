@@ -47,5 +47,21 @@ class ExampleUnitTest {
     assertEquals("05:30", com.example.service.LocationService.formatDuration(330))
     assertEquals("01:15:00", com.example.service.LocationService.formatDuration(4500))
   }
+
+  @Test
+  fun testCampusLandmarksAndRoutesExist() {
+    val landmarks = com.example.ui.map.VIT_CAMPUS_DETAILED_LANDMARKS
+    assertTrue(landmarks.isNotEmpty())
+    assertTrue(landmarks.any { it.shortCode == "SJT" })
+    assertTrue(landmarks.any { it.shortCode == "TT" })
+    assertTrue(landmarks.any { it.shortCode == "PRP" })
+    assertTrue(landmarks.any { it.shortCode == "LAKE" })
+    assertTrue(landmarks.any { it.shortCode == "MH-F" })
+
+    val artRoutes = com.example.ui.map.VIT_CAMPUS_PRESET_ART_ROUTES
+    assertTrue(artRoutes.isNotEmpty())
+    assertTrue(artRoutes.any { it.shapeName == "Dolphin" })
+    assertTrue(artRoutes.any { it.shapeName == "Infinity" })
+  }
 }
 

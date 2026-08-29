@@ -84,7 +84,14 @@ object RouteArtEngine {
         return rawPoints.map { pt ->
             val normX = targetCenterX + (pt.x - centerX) * scale
             val normY = targetCenterY + (pt.y - centerY) * scale
-            PointF(normX, normY)
+            PointF(
+                x = normX,
+                y = normY,
+                altitudeMeters = pt.altitudeMeters,
+                verticalDisplacement = pt.verticalDisplacement,
+                strokeThicknessMultiplier = pt.strokeThicknessMultiplier,
+                gradePercentage = pt.gradePercentage
+            )
         }
     }
 
@@ -133,6 +140,10 @@ object RouteArtEngine {
             val obj = JSONObject()
             obj.put("x", it.x.toDouble())
             obj.put("y", it.y.toDouble())
+            obj.put("alt", it.altitudeMeters)
+            obj.put("vDisp", it.verticalDisplacement.toDouble())
+            obj.put("thick", it.strokeThicknessMultiplier.toDouble())
+            obj.put("grade", it.gradePercentage.toDouble())
             array.put(obj)
         }
         return array.toString()
@@ -148,7 +159,16 @@ object RouteArtEngine {
             val array = JSONArray(json)
             for (i in 0 until array.length()) {
                 val obj = array.getJSONObject(i)
-                list.add(PointF(obj.getDouble("x").toFloat(), obj.getDouble("y").toFloat()))
+                list.add(
+                    PointF(
+                        x = obj.getDouble("x").toFloat(),
+                        y = obj.getDouble("y").toFloat(),
+                        altitudeMeters = obj.optDouble("alt", 184.0),
+                        verticalDisplacement = obj.optDouble("vDisp", 0.0).toFloat(),
+                        strokeThicknessMultiplier = obj.optDouble("thick", 1.0).toFloat(),
+                        gradePercentage = obj.optDouble("grade", 0.0).toFloat()
+                    )
+                )
             }
         } catch (_: Exception) {}
         return list
@@ -395,9 +415,37 @@ object RouteArtEngine {
             }
         }
 
-        val normalized = normalizePoints(points, 800f, 100f)
+        val rawWithAltitude = points.mapIndexed { idx, pt ->
+            val t = idx.toFloat() / count
+            val alt = 184.0 + 12.0 * sin(t * 3 * PI).toFloat() + 4.0 * cos(t * 5 * PI).toFloat()
+            val vDisp = (alt - 184.0).toFloat()
+            val grade = (10.0 * cos(t * 3 * PI)).toFloat()
+            val thick = calculateInclineThickness(grade, vDisp)
+            PointF(
+                x = pt.x,
+                y = pt.y,
+                altitudeMeters = alt,
+                verticalDisplacement = vDisp,
+                strokeThicknessMultiplier = thick,
+                gradePercentage = grade
+            )
+        }
+
+        val normalized = normalizePoints(rawWithAltitude, 800f, 100f)
         val palette = PASTEL_PALETTES[seedType % PASTEL_PALETTES.size]
         val blobs = generateColorBlobs(normalized, palette)
         return normalized to blobs
+    }
+
+    fun calculateInclineThickness(gradePct: Float, verticalDispMeters: Float): Float {
+        val inclineBonus = when {
+            gradePct >= 8f -> 1.5f + ((gradePct - 8f) * 0.08f).coerceAtMost(0.8f)
+            gradePct >= 4f -> 0.6f + ((gradePct - 4f) * 0.15f)
+            gradePct >= 1.5f -> 0.2f + ((gradePct - 1.5f) * 0.10f)
+            gradePct <= -4f -> -0.15f
+            else -> 0.0f
+        }
+        val displacementBonus = (verticalDispMeters * 0.03f).coerceIn(-0.2f, 0.6f)
+        return (1.0f + inclineBonus + displacementBonus).coerceIn(0.75f, 3.2f)
     }
 }

@@ -30,6 +30,8 @@ import com.example.ui.challenges.ChallengesScreen
 import com.example.ui.challenges.ChallengesViewModel
 import com.example.ui.home.HomeScreen
 import com.example.ui.home.HomeViewModel
+import com.example.ui.map.CampusMapScreen
+import com.example.ui.map.CampusMapViewModel
 import com.example.ui.profile.ProfileScreen
 import com.example.ui.profile.ProfileViewModel
 import com.example.ui.store.StoreScreen
@@ -95,6 +97,18 @@ fun MainScreen(
                                 navController.navigate(Screen.Tracker.route)
                             },
                             testTag = "nav_tracker"
+                        )
+
+                        // Campus Map Tab
+                        val isMap = currentRoute == Screen.Map.route
+                        BottomNavItem(
+                            icon = if (isMap) Icons.Filled.Map else Icons.Outlined.Map,
+                            label = "Campus",
+                            isSelected = isMap,
+                            onClick = {
+                                navController.navigate(Screen.Map.route)
+                            },
+                            testTag = "nav_map"
                         )
 
                         // Challenges Tab
@@ -195,6 +209,19 @@ fun MainScreen(
                     viewModel = challengesVm,
                     onNavigateBack = {
                         navController.popBackStack()
+                    }
+                )
+            }
+
+            composable(Screen.Map.route) {
+                val mapVm: CampusMapViewModel = viewModel()
+                CampusMapScreen(
+                    viewModel = mapVm,
+                    onNavigateToTracker = { presetRouteName ->
+                        navController.navigate(Screen.Tracker.route)
+                    },
+                    onNavigateToChallenges = {
+                        navController.navigate(Screen.Challenges.route)
                     }
                 )
             }

@@ -198,16 +198,37 @@ private fun DrawScope.drawSmoothedWalkingPath(
     brushStyle: String,
     artStyle: String
 ) {
-    val path = Path()
+    if (points.isEmpty()) return
     val scaledPoints = points.map { Offset(it.x * scaleX, it.y * scaleY) }
 
-    path.moveTo(scaledPoints[0].x, scaledPoints[0].y)
+    val baseStrokeWidth = when (brushStyle) {
+        "CHALK" -> 4.5.dp.toPx()
+        "NEON" -> 3.8.dp.toPx()
+        "WATERCOLOR" -> 3.5.dp.toPx()
+        else -> 3.2.dp.toPx()
+    }
 
+    if (scaledPoints.size == 1) {
+        drawCircle(
+            color = Color(0xFF1E2822),
+            radius = baseStrokeWidth,
+            center = scaledPoints[0]
+        )
+        return
+    }
+
+    // Segment-by-segment spline rendering with dynamic incline thickness & elevation accents
     for (i in 0 until scaledPoints.size - 1) {
         val p0 = if (i > 0) scaledPoints[i - 1] else scaledPoints[i]
         val p1 = scaledPoints[i]
         val p2 = scaledPoints[i + 1]
         val p3 = if (i + 2 < scaledPoints.size) scaledPoints[i + 2] else p2
+
+        val ptCurr = points[i]
+        val ptNext = points[i + 1]
+        val localMultiplier = ((ptCurr.strokeThicknessMultiplier + ptNext.strokeThicknessMultiplier) / 2f).coerceIn(0.75f, 3.2f)
+        val segStrokeWidth = baseStrokeWidth * localMultiplier
+        val grade = (ptCurr.gradePercentage + ptNext.gradePercentage) / 2f
 
         // Catmull-Rom to Cubic Bezier control points
         val cp1x = p1.x + (p2.x - p0.x) / 6f
@@ -215,73 +236,92 @@ private fun DrawScope.drawSmoothedWalkingPath(
         val cp2x = p2.x - (p3.x - p1.x) / 6f
         val cp2y = p2.y - (p3.y - p1.y) / 6f
 
-        path.cubicTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y)
-    }
+        val segPath = Path().apply {
+            moveTo(p1.x, p1.y)
+            cubicTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y)
+        }
 
-    val strokeWidth = when (brushStyle) {
-        "CHALK" -> 4.5.dp.toPx()
-        "NEON" -> 3.8.dp.toPx()
-        "WATERCOLOR" -> 3.5.dp.toPx()
-        else -> 3.2.dp.toPx()
-    }
+        // Draw Incline Elevation Bloom for uphill ascents (vertical displacement)
+        if (localMultiplier > 1.2f || grade >= 2.0f) {
+            val bloomColor = when {
+                grade >= 6.0f -> Color(0xFFFF8A65).copy(alpha = 0.35f) // Warm coral for steep climb
+                grade >= 2.0f -> Color(0xFFFFD54F).copy(alpha = 0.30f) // Golden amber for gentle climb
+                else -> Color(0xFF80CBC4).copy(alpha = 0.25f)
+            }
+            drawPath(
+                path = segPath,
+                color = bloomColor,
+                style = Stroke(
+                    width = segStrokeWidth * 2.2f,
+                    cap = StrokeCap.Round,
+                    join = StrokeJoin.Round
+                )
+            )
+        }
 
-    when (brushStyle) {
-        "NEON" -> {
-            // Glowing outer beam
-            drawPath(
-                path = path,
-                color = Color(0x6600F5D4),
-                style = Stroke(
-                    width = strokeWidth * 2.8f,
-                    cap = StrokeCap.Round,
-                    join = StrokeJoin.Round
+        when (brushStyle) {
+            "NEON" -> {
+                // Glowing outer beam
+                drawPath(
+                    path = segPath,
+                    color = Color(0x6600F5D4),
+                    style = Stroke(
+                        width = segStrokeWidth * 2.5f,
+                        cap = StrokeCap.Round,
+                        join = StrokeJoin.Round
+                    )
                 )
-            )
-            // Vivid neon core
-            drawPath(
-                path = path,
-                color = Color(0xFF00F5D4),
-                style = Stroke(
-                    width = strokeWidth,
-                    cap = StrokeCap.Round,
-                    join = StrokeJoin.Round
+                // Vivid neon core
+                drawPath(
+                    path = segPath,
+                    color = if (grade >= 4.0f) Color(0xFFFF4081) else Color(0xFF00F5D4),
+                    style = Stroke(
+                        width = segStrokeWidth,
+                        cap = StrokeCap.Round,
+                        join = StrokeJoin.Round
+                    )
                 )
-            )
-        }
-        "WATERCOLOR" -> {
-            drawPath(
-                path = path,
-                color = Color(0xCC3D314A),
-                style = Stroke(
-                    width = strokeWidth * 1.3f,
-                    cap = StrokeCap.Round,
-                    join = StrokeJoin.Round
+            }
+            "WATERCOLOR" -> {
+                drawPath(
+                    path = segPath,
+                    color = if (grade >= 3.0f) Color(0xCC5D4037) else Color(0xCC3D314A),
+                    style = Stroke(
+                        width = segStrokeWidth * 1.3f,
+                        cap = StrokeCap.Round,
+                        join = StrokeJoin.Round
+                    )
                 )
-            )
-        }
-        "CHALK" -> {
-            drawPath(
-                path = path,
-                color = Color(0xFF435048),
-                style = Stroke(
-                    width = strokeWidth,
-                    cap = StrokeCap.Round,
-                    join = StrokeJoin.Round,
-                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 6f), 0f)
+            }
+            "CHALK" -> {
+                drawPath(
+                    path = segPath,
+                    color = if (grade >= 3.0f) Color(0xFF5D4037) else Color(0xFF435048),
+                    style = Stroke(
+                        width = segStrokeWidth,
+                        cap = StrokeCap.Round,
+                        join = StrokeJoin.Round,
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 6f), 0f)
+                    )
                 )
-            )
-        }
-        else -> {
-            // Elegant Rich Ink Line (like in mockup design)
-            drawPath(
-                path = path,
-                color = Color(0xFF1E2822),
-                style = Stroke(
-                    width = strokeWidth,
-                    cap = StrokeCap.Round,
-                    join = StrokeJoin.Round
+            }
+            else -> {
+                // Elegant Rich Ink Line with dynamic incline thickness
+                val strokeColor = when {
+                    grade >= 6.0f -> Color(0xFFBF360C) // Rich terracotta for peak ascents
+                    grade >= 2.0f -> Color(0xFF1B382B) // Deep spruce for gentle incline
+                    else -> Color(0xFF1E2822)          // Classic dark slate ink
+                }
+                drawPath(
+                    path = segPath,
+                    color = strokeColor,
+                    style = Stroke(
+                        width = segStrokeWidth,
+                        cap = StrokeCap.Round,
+                        join = StrokeJoin.Round
+                    )
                 )
-            )
+            }
         }
     }
 }

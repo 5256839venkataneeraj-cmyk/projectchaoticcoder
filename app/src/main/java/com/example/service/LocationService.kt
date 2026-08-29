@@ -47,6 +47,10 @@ data class WalkLocationUpdate(
     val currentSpeedKmh: Double,
     val estimatedSteps: Int,
     val sessionDurationSeconds: Int = 0,
+    val altitudeMeters: Double = 0.0,
+    val verticalDisplacementMeters: Double = 0.0,
+    val elevationGainMeters: Double = 0.0,
+    val gradePercentage: Double = 0.0,
     val timestamp: Long = System.currentTimeMillis()
 )
 
@@ -60,7 +64,12 @@ data class LocationServiceState(
     val totalDistanceMeters: Double = 0.0,
     val estimatedSteps: Int = 0,
     val currentSpeedKmh: Double = 0.0,
-    val gpsAccuracyMeters: Float = 0f
+    val gpsAccuracyMeters: Float = 0f,
+    val currentAltitudeMeters: Double = 0.0,
+    val elevationGainMeters: Double = 0.0,
+    val verticalDisplacementMeters: Double = 0.0,
+    val gradePercentage: Double = 0.0,
+    val strokeThicknessMultiplier: Float = 1.0f
 )
 
 class LocationService : Service() {
@@ -75,6 +84,11 @@ class LocationService : Service() {
     private var sessionDurationSeconds = 0
     private var baseLat: Double? = null
     private var baseLng: Double? = null
+    private var baseAltitude: Double? = null
+    private var previousAltitude: Double? = null
+    private var elevationGainAccumulated = 0.0
+    private var currentGradePercentage = 0.0
+    private var currentStrokeMultiplier = 1.0f
     private var isPaused = false
 
     companion object {
@@ -229,6 +243,31 @@ class LocationService : Service() {
             previousLocation = location
         }
 
+        // Altitude and vertical displacement calculations
+        val currentAltitude = if (location.hasAltitude()) location.altitude else (previousAltitude ?: 184.0)
+        if (baseAltitude == null) {
+            baseAltitude = currentAltitude
+        }
+        val prevAlt = previousAltitude ?: currentAltitude
+        val altitudeDelta = currentAltitude - prevAlt
+        if (altitudeDelta > 0.3) {
+            elevationGainAccumulated += altitudeDelta
+        }
+        previousAltitude = currentAltitude
+        val netVerticalDisplacement = currentAltitude - (baseAltitude ?: currentAltitude)
+
+        // Calculate Grade Percentage (Slope) based on horizontal distance delta
+        val gradePct = if (distDelta >= 1.5) {
+            ((altitudeDelta / distDelta) * 100.0).coerceIn(-25.0, 35.0)
+        } else {
+            currentGradePercentage
+        }
+        currentGradePercentage = gradePct
+
+        // Dynamic stroke thickness multiplier: heavier for inclines/uphill climb
+        val strokeMultiplier = calculateInclineStrokeMultiplier(gradePct, netVerticalDisplacement)
+        currentStrokeMultiplier = strokeMultiplier
+
         // Convert GPS latitude/longitude to 0..1000 campus map coordinates relative to starting anchor
         val currentBaseLat = baseLat ?: location.latitude
         val currentBaseLng = baseLng ?: location.longitude
@@ -239,7 +278,14 @@ class LocationService : Service() {
         // Map ~500m campus radius to 500 center +- 400 pixels
         val canvasX = (500f + (lngDiffMeters * 1.5f).toFloat()).coerceIn(40f, 960f)
         val canvasY = (500f - (latDiffMeters * 1.5f).toFloat()).coerceIn(40f, 960f)
-        val point = PointF(canvasX, canvasY)
+        val point = PointF(
+            x = canvasX,
+            y = canvasY,
+            altitudeMeters = currentAltitude,
+            verticalDisplacement = netVerticalDisplacement.toFloat(),
+            strokeThicknessMultiplier = strokeMultiplier,
+            gradePercentage = gradePct.toFloat()
+        )
 
         val speedKmh = if (location.hasSpeed()) (location.speed * 3.6) else 0.0
         val estimatedSteps = (totalDistanceAccumulated / 0.72).roundToInt()
@@ -252,7 +298,12 @@ class LocationService : Service() {
             totalDistanceMeters = totalDistanceAccumulated,
             currentSpeedKmh = Math.round(speedKmh * 10.0) / 10.0,
             estimatedSteps = estimatedSteps,
-            sessionDurationSeconds = sessionDurationSeconds
+            sessionDurationSeconds = sessionDurationSeconds,
+            altitudeMeters = currentAltitude,
+            verticalDisplacementMeters = netVerticalDisplacement,
+            elevationGainMeters = elevationGainAccumulated,
+            gradePercentage = gradePct,
+            timestamp = location.time.takeIf { it > 0 } ?: System.currentTimeMillis()
         )
 
         serviceScope.launch {
@@ -270,13 +321,33 @@ class LocationService : Service() {
             totalDistanceMeters = totalDistanceAccumulated,
             estimatedSteps = estimatedSteps,
             currentSpeedKmh = Math.round(speedKmh * 10.0) / 10.0,
-            gpsAccuracyMeters = if (location.hasAccuracy()) location.accuracy else 0f
+            gpsAccuracyMeters = if (location.hasAccuracy()) location.accuracy else 0f,
+            currentAltitudeMeters = currentAltitude,
+            elevationGainMeters = elevationGainAccumulated,
+            verticalDisplacementMeters = netVerticalDisplacement,
+            gradePercentage = gradePct,
+            strokeThicknessMultiplier = strokeMultiplier
         )
 
         updateNotification(
             title = "Live Walk: $km km • $formattedTime",
-            content = "$estimatedSteps steps • Transforming movement into route art"
+            content = "$estimatedSteps steps • ▲${elevationGainAccumulated.toInt()}m gain • Mapping route art"
         )
+    }
+
+    private fun calculateInclineStrokeMultiplier(gradePercent: Double, verticalDisplacementMeters: Double): Float {
+        // Base stroke multiplier is 1.0f on flat ground
+        // Inclines scale up thickness progressively: +5% slope -> ~1.4x, +10% slope -> ~2.0x, steep climbs -> up to 3.0x
+        val inclineBonus = when {
+            gradePercent >= 8.0 -> 1.5f + ((gradePercent - 8.0).toFloat() * 0.08f).coerceAtMost(0.8f)
+            gradePercent >= 4.0 -> 0.6f + ((gradePercent - 4.0).toFloat() * 0.15f)
+            gradePercent >= 1.5 -> 0.2f + ((gradePercent - 1.5).toFloat() * 0.10f)
+            gradePercent <= -4.0 -> -0.15f // Slightly leaner stroke on steep downhill
+            else -> 0.0f
+        }
+
+        val displacementBonus = (verticalDisplacementMeters.toFloat() * 0.03f).coerceIn(-0.2f, 0.6f)
+        return (1.0f + inclineBonus + displacementBonus).coerceIn(0.75f, 3.2f)
     }
 
     @SuppressLint("MissingPermission")
@@ -286,6 +357,11 @@ class LocationService : Service() {
         previousLocation = null
         baseLat = null
         baseLng = null
+        baseAltitude = null
+        previousAltitude = null
+        elevationGainAccumulated = 0.0
+        currentGradePercentage = 0.0
+        currentStrokeMultiplier = 1.0f
         _serviceState.value = LocationServiceState(
             isRunning = true,
             isPaused = false,
@@ -308,14 +384,22 @@ class LocationService : Service() {
 
         val locationRequest = LocationRequest.Builder(
             Priority.PRIORITY_HIGH_ACCURACY,
-            2500L // 2.5 seconds interval
+            2000L // 2.0 seconds interval
         ).apply {
-            setMinUpdateIntervalMillis(1500L)
-            setMinUpdateDistanceMeters(2.0f) // 2 meters movement
+            setMinUpdateIntervalMillis(1000L)
+            setMaxUpdateDelayMillis(3000L)
+            setMinUpdateDistanceMeters(1.5f) // 1.5 meters movement
             setWaitForAccurateLocation(false)
         }.build()
 
         try {
+            // Immediately request last known location for instant coordinate fix
+            fusedLocationClient.lastLocation.addOnSuccessListener { loc ->
+                if (loc != null && _serviceState.value.pointsCount == 0 && !isPaused) {
+                    processNewLocation(loc)
+                }
+            }
+
             fusedLocationClient.requestLocationUpdates(
                 locationRequest,
                 locationCallback,

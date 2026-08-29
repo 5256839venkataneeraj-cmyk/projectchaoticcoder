@@ -132,64 +132,95 @@ fun ContinuousGpsPathOverlay(
                 zoomScale = zoomScale
             )
 
-            // 3. Render continuous path
+            // 3. Render continuous path with dynamic incline thickness and vertical displacement
             if (projectedPoints.size >= 2) {
-                val path = Path()
-                path.moveTo(projectedPoints[0].x, projectedPoints[0].y)
-
-                // Smooth Catmull-Rom or cubic Bezier path interpolation
+                // Render segment-by-segment with dynamic stroke thickness & elevation shading
                 for (i in 1 until projectedPoints.size) {
-                    val prev = projectedPoints[i - 1]
-                    val curr = projectedPoints[i]
-                    val midX = (prev.x + curr.x) / 2f
-                    val midY = (prev.y + curr.y) / 2f
-                    path.quadraticTo(prev.x, prev.y, midX, midY)
+                    val pPrev = projectedPoints[i - 1]
+                    val pCurr = projectedPoints[i]
+                    val cPrev = coordinates[i - 1]
+                    val cCurr = coordinates[i]
+
+                    val segMultiplier = ((cPrev.strokeThicknessMultiplier + cCurr.strokeThicknessMultiplier) / 2f).coerceIn(0.75f, 3.2f)
+                    val baseWidth = 3.5.dp.toPx()
+                    val dynamicWidth = baseWidth * segMultiplier
+
+                    val segPath = Path().apply {
+                        moveTo(pPrev.x, pPrev.y)
+                        lineTo(pCurr.x, pCurr.y)
+                    }
+
+                    // Incline-aware coloring & glow: Ascents get warm elevation tint, flats get mint/slate
+                    val grade = (cPrev.gradePercentage + cCurr.gradePercentage) / 2.0
+                    val segGlowColor = when {
+                        grade >= 6.0 -> Color(0xFFFF7043).copy(alpha = 0.45f) // Coral glow for steep climb
+                        grade >= 2.0 -> Color(0xFFFFA726).copy(alpha = 0.4f)  // Warm amber for gentle incline
+                        grade <= -3.0 -> Color(0xFF26C6DA).copy(alpha = 0.35f) // Cyan for descent
+                        else -> glowColor.copy(alpha = 0.35f)
+                    }
+
+                    val segStrokeColor = when {
+                        grade >= 6.0 -> Color(0xFFD84315) // Deep burnt orange for steep ascent
+                        grade >= 2.0 -> Color(0xFF2E7D32) // Forest green for incline
+                        else -> strokeColor
+                    }
+
+                    // 1. Soft elevation ambient glow aura (scales with incline thickness)
+                    drawPath(
+                        path = segPath,
+                        color = segGlowColor,
+                        style = Stroke(
+                            width = (14.dp.toPx() * segMultiplier * zoomScale.coerceIn(0.8f, 1.8f)),
+                            cap = StrokeCap.Round,
+                            join = StrokeJoin.Round
+                        )
+                    )
+
+                    // 2. Intermediate accent stroke
+                    drawPath(
+                        path = segPath,
+                        color = if (grade >= 2.0) Color(0xFFFFB74D).copy(alpha = 0.7f) else Color(0xFF56B386).copy(alpha = 0.75f),
+                        style = Stroke(
+                            width = (7.dp.toPx() * segMultiplier * zoomScale.coerceIn(0.8f, 1.5f)),
+                            cap = StrokeCap.Round,
+                            join = StrokeJoin.Round
+                        )
+                    )
+
+                    // 3. Crisp foreground path with dynamic incline thickness
+                    drawPath(
+                        path = segPath,
+                        color = segStrokeColor,
+                        style = Stroke(
+                            width = dynamicWidth,
+                            cap = StrokeCap.Round,
+                            join = StrokeJoin.Round
+                        )
+                    )
+
+                    // Draw elevation contour ticks on prominent inclines
+                    if (grade >= 4.0 && i % 2 == 0) {
+                        val midX = (pPrev.x + pCurr.x) / 2f
+                        val midY = (pPrev.y + pCurr.y) / 2f
+                        drawCircle(
+                            color = Color(0xFFFF7043),
+                            radius = 3.5.dp.toPx(),
+                            center = Offset(midX, midY)
+                        )
+                    }
                 }
-                path.lineTo(projectedPoints.last().x, projectedPoints.last().y)
-
-                // Render soft ambient watercolor glow aura
-                drawPath(
-                    path = path,
-                    color = glowColor.copy(alpha = 0.35f),
-                    style = Stroke(
-                        width = 16.dp.toPx() * zoomScale.coerceIn(0.8f, 1.8f),
-                        cap = StrokeCap.Round,
-                        join = StrokeJoin.Round
-                    )
-                )
-
-                // Render intermediate accent stroke
-                drawPath(
-                    path = path,
-                    color = Color(0xFF56B386).copy(alpha = 0.75f),
-                    style = Stroke(
-                        width = 8.dp.toPx() * zoomScale.coerceIn(0.8f, 1.5f),
-                        cap = StrokeCap.Round,
-                        join = StrokeJoin.Round
-                    )
-                )
-
-                // Render crisp foreground continuous path
-                drawPath(
-                    path = path,
-                    color = strokeColor,
-                    style = Stroke(
-                        width = 3.5.dp.toPx(),
-                        cap = StrokeCap.Round,
-                        join = StrokeJoin.Round
-                    )
-                )
 
                 // Render distance waypoint nodes along the route
                 for (i in 0 until projectedPoints.size step max(1, projectedPoints.size / 6)) {
                     val pt = projectedPoints[i]
+                    val coord = coordinates[i]
                     drawCircle(
                         color = Color.White,
                         radius = 4.dp.toPx(),
                         center = Offset(pt.x, pt.y)
                     )
                     drawCircle(
-                        color = strokeColor,
+                        color = if (coord.gradePercentage >= 3.0) Color(0xFFFF7043) else strokeColor,
                         radius = 2.5.dp.toPx(),
                         center = Offset(pt.x, pt.y)
                     )
@@ -299,6 +330,14 @@ fun ContinuousGpsPathOverlay(
                         color = DarkSlateSecondary
                     )
 
+                    val altDisplay = if (lastCoord.altitudeMeters > 0) "${lastCoord.altitudeMeters.roundToInt()}m" else "-- m"
+                    val gainDisplay = if (elevationGain > 0.5) " (▲+${elevationGain.roundToInt()}m)" else ""
+                    Text(
+                        text = "ALT: $altDisplay$gainDisplay",
+                        style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+                        color = if (lastCoord.gradePercentage >= 3.0) Color(0xFFD84315) else DarkSlateSecondary
+                    )
+
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.padding(top = 2.dp)
@@ -313,6 +352,14 @@ fun ContinuousGpsPathOverlay(
                                 text = "±${lastCoord.accuracyMeters.toInt()}m",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = AccentMint
+                            )
+                        }
+                        if (lastCoord.gradePercentage.absoluteValue >= 1.0) {
+                            val gradeSign = if (lastCoord.gradePercentage > 0) "+" else ""
+                            Text(
+                                text = "$gradeSign${String.format("%.1f", lastCoord.gradePercentage)}% slope",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                color = if (lastCoord.gradePercentage > 0) Color(0xFFFF7043) else Color(0xFF26C6DA)
                             )
                         }
                     }

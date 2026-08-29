@@ -42,6 +42,11 @@ data class TrackerUiState(
     val currentLat: Double? = null,
     val currentLng: Double? = null,
     val gpsAccuracyMeters: Float = 0f,
+    val altitudeMeters: Double = 0.0,
+    val elevationGainMeters: Double = 0.0,
+    val verticalDisplacementMeters: Double = 0.0,
+    val gradePercentage: Double = 0.0,
+    val strokeThicknessMultiplier: Float = 1.0f,
     val selectedPresetName: String = "Live Campus Walk",
     val newlyGeneratedRouteId: Long? = null,
     val showCompletionCelebration: Boolean = false,
@@ -71,7 +76,10 @@ class MapTrackerViewModel(application: Application) : AndroidViewModel(applicati
                     val newGps = GpsCoordinate(
                         latitude = update.location.latitude,
                         longitude = update.location.longitude,
-                        altitudeMeters = if (update.location.hasAltitude()) update.location.altitude else 0.0,
+                        altitudeMeters = update.altitudeMeters,
+                        verticalDisplacementMeters = update.verticalDisplacementMeters,
+                        gradePercentage = update.gradePercentage,
+                        strokeThicknessMultiplier = update.point.strokeThicknessMultiplier,
                         accuracyMeters = if (update.location.hasAccuracy()) update.location.accuracy else 0f,
                         speedKmh = update.currentSpeedKmh,
                         timestamp = update.timestamp
@@ -102,6 +110,11 @@ class MapTrackerViewModel(application: Application) : AndroidViewModel(applicati
                         currentLat = update.location.latitude,
                         currentLng = update.location.longitude,
                         gpsAccuracyMeters = if (update.location.hasAccuracy()) update.location.accuracy else 0f,
+                        altitudeMeters = update.altitudeMeters,
+                        elevationGainMeters = update.elevationGainMeters,
+                        verticalDisplacementMeters = update.verticalDisplacementMeters,
+                        gradePercentage = update.gradePercentage,
+                        strokeThicknessMultiplier = update.point.strokeThicknessMultiplier,
                         detectedShapeName = shape,
                         detectedCategory = category
                     )
@@ -118,7 +131,12 @@ class MapTrackerViewModel(application: Application) : AndroidViewModel(applicati
                     _uiState.value = _uiState.value.copy(
                         durationSeconds = sState.durationSeconds,
                         isPaused = sState.isPaused,
-                        averagePaceText = pace
+                        averagePaceText = pace,
+                        altitudeMeters = sState.currentAltitudeMeters,
+                        elevationGainMeters = sState.elevationGainMeters,
+                        verticalDisplacementMeters = sState.verticalDisplacementMeters,
+                        gradePercentage = sState.gradePercentage,
+                        strokeThicknessMultiplier = sState.strokeThicknessMultiplier
                     )
                 }
             }
@@ -183,7 +201,10 @@ class MapTrackerViewModel(application: Application) : AndroidViewModel(applicati
                     GpsCoordinate(
                         latitude = baseLat + ((500f - pt.y) * 0.000008),
                         longitude = baseLng + ((pt.x - 500f) * 0.000008),
-                        altitudeMeters = 184.0 + (idx * 0.2),
+                        altitudeMeters = pt.altitudeMeters,
+                        verticalDisplacementMeters = pt.verticalDisplacement.toDouble(),
+                        gradePercentage = pt.gradePercentage.toDouble(),
+                        strokeThicknessMultiplier = pt.strokeThicknessMultiplier,
                         accuracyMeters = 3.5f + (idx % 2),
                         speedKmh = 4.8,
                         timestamp = System.currentTimeMillis() - ((currentPts.size - idx) * 1000L)
@@ -196,6 +217,7 @@ class MapTrackerViewModel(application: Application) : AndroidViewModel(applicati
                 val displacement = GpsDistanceCalculator.calculateDisplacementMeters(currentGps)
                 val formattedDist = GpsDistanceCalculator.formatDistance(calculatedMeters, _uiState.value.preferMetersUnit)
                 val pace = GpsDistanceCalculator.calculatePaceFormatted(calculatedMeters, sec * 45)
+                val lastPt = currentPts.lastOrNull()
 
                 _uiState.value = _uiState.value.copy(
                     demoSecondsRemaining = remaining,
@@ -212,6 +234,10 @@ class MapTrackerViewModel(application: Application) : AndroidViewModel(applicati
                     currentLat = currentGps.lastOrNull()?.latitude,
                     currentLng = currentGps.lastOrNull()?.longitude,
                     gpsAccuracyMeters = 3.5f,
+                    altitudeMeters = lastPt?.altitudeMeters ?: 184.0,
+                    verticalDisplacementMeters = lastPt?.verticalDisplacement?.toDouble() ?: 0.0,
+                    gradePercentage = lastPt?.gradePercentage?.toDouble() ?: 0.0,
+                    strokeThicknessMultiplier = lastPt?.strokeThicknessMultiplier ?: 1.0f,
                     detectedShapeName = shape,
                     detectedCategory = cat
                 )

@@ -24,6 +24,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -63,12 +64,14 @@ fun MapTrackerScreen(
         if (hasFine || hasCoarse) {
             viewModel.startTracking()
         } else {
-            permissionLauncher.launch(
-                arrayOf(
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION
-                )
+            val permissionsToRequest = mutableListOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION
             )
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
+            }
+            permissionLauncher.launch(permissionsToRequest.toTypedArray())
         }
     }
 
@@ -298,16 +301,37 @@ fun MapTrackerScreen(
                             }
                         }
 
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = if (uiState.isSpeedExceeded) Color(0xFFFFEBEE) else AccentMintLight
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Text(
-                                text = if (uiState.isSpeedExceeded) "⚠️ Speed > 15 km/h" else "🚶 ${uiState.speedKmh} km/h (Walking)",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = if (uiState.isSpeedExceeded) Color(0xFFC62828) else DarkSlatePrimary,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                            )
+                            if (uiState.elevationGainMeters > 0.5 || uiState.altitudeMeters > 0) {
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = if (uiState.gradePercentage >= 3.0) Color(0xFFFFE0B2) else AccentLavenderLight
+                                ) {
+                                    val elevGainStr = if (uiState.elevationGainMeters > 0.5) "▲${uiState.elevationGainMeters.toInt()}m" else "${uiState.altitudeMeters.toInt()}m"
+                                    val thickStr = if (uiState.strokeThicknessMultiplier > 1.15f) " • ${String.format("%.1f", uiState.strokeThicknessMultiplier)}x stroke" else ""
+                                    Text(
+                                        text = "⛰️ $elevGainStr$thickStr",
+                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                        color = if (uiState.gradePercentage >= 3.0) Color(0xFFD84315) else AccentLavender,
+                                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp)
+                                    )
+                                }
+                            }
+
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (uiState.isSpeedExceeded) Color(0xFFFFEBEE) else AccentMintLight
+                            ) {
+                                Text(
+                                    text = if (uiState.isSpeedExceeded) "⚠️ Speed > 15 km/h" else "🚶 ${uiState.speedKmh} km/h (Walking)",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (uiState.isSpeedExceeded) Color(0xFFC62828) else DarkSlatePrimary,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
                         }
                     }
                 }

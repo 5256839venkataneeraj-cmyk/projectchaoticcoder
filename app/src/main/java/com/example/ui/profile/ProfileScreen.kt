@@ -12,11 +12,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,6 +34,28 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.*
 
+// Colors specifically matching the screenshot design
+private val CanvasBackground = Color(0xFFF7F5EE)
+private val DarkTitleColor = Color(0xFF16211B)
+private val SubtitleMuted = Color(0xFF75857C)
+private val GreenUnderlineColor = Color(0xFF639D75)
+
+private val GradientStartMint = Color(0xFFA5E6CF)
+private val GradientEndLavender = Color(0xFFBCC6FA)
+
+private val RecentCardBorder = Color(0xFF38493F)
+private val ItemArtworksMint = Color(0xFFD7F5E4)
+private val ItemArtworksIconDark = Color(0xFF1E4833)
+
+private val ItemGalleryLavender = Color(0xFFE2E6FF)
+private val ItemGalleryIconDark = Color(0xFF383387)
+
+private val ItemThemesPeach = Color(0xFFFFECC7)
+private val ItemThemesIconDark = Color(0xFF7A5112)
+
+private val LogoutPillBackground = Color(0xFFFFDDE0)
+private val LogoutPillTextColor = Color(0xFFDC2626)
+
 @Composable
 fun ProfileScreen(
     viewModel: ProfileViewModel,
@@ -47,11 +68,11 @@ fun ProfileScreen(
     val context = LocalContext.current
 
     var showAccountDetailsDialog by remember { mutableStateOf(false) }
+    var showThemesDialog by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
-    var isLoggedOutState by remember { mutableStateOf(false) }
 
     // Account Details Edit State
-    var editName by remember(uiState.userProfile.username) { mutableStateOf(uiState.userProfile.username.ifEmpty { "James" }) }
+    var editName by remember(uiState.userProfile.username) { mutableStateOf(uiState.userProfile.username.ifEmpty { "Neeraj" }) }
     var editStudentId by remember(uiState.userProfile.studentId) { mutableStateOf(uiState.userProfile.studentId) }
     var editHostel by remember(uiState.userProfile.hostelBlock) { mutableStateOf(uiState.userProfile.hostelBlock) }
     var editDepartment by remember(uiState.userProfile.department) { mutableStateOf(uiState.userProfile.department) }
@@ -82,7 +103,7 @@ fun ProfileScreen(
                     Text(
                         text = "Account Details",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = DarkSlatePrimary
+                        color = DarkTitleColor
                     )
                 }
             },
@@ -96,7 +117,7 @@ fun ProfileScreen(
                     // Profile Level Badge
                     Surface(
                         shape = RoundedCornerShape(14.dp),
-                        color = SoftLavenderRecent,
+                        color = ItemGalleryLavender,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
@@ -108,7 +129,7 @@ fun ProfileScreen(
                                 Text(
                                     text = "Explorer Rank",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = TextMuted
+                                    color = SubtitleMuted
                                 )
                                 Text(
                                     text = uiState.userProfile.explorerRank,
@@ -137,7 +158,7 @@ fun ProfileScreen(
                         label = { Text("Full Name") },
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().testTag("profile_name_input")
                     )
 
                     // Editable Student ID
@@ -177,36 +198,36 @@ fun ProfileScreen(
                     ) {
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = SoftMintRecent,
+                            color = ItemArtworksMint,
                             modifier = Modifier.weight(1f)
                         ) {
                             Column(
                                 modifier = Modifier.padding(10.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Text("Artworks", style = MaterialTheme.typography.labelSmall, color = TextMuted)
+                                Text("Artworks", style = MaterialTheme.typography.labelSmall, color = SubtitleMuted)
                                 Text(
                                     "${uiState.totalArtworksCount}",
                                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = DarkSlatePrimary
+                                    color = DarkTitleColor
                                 )
                             }
                         }
 
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = SoftMintRecent,
+                            color = ItemArtworksMint,
                             modifier = Modifier.weight(1f)
                         ) {
                             Column(
                                 modifier = Modifier.padding(10.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Text("Total Steps", style = MaterialTheme.typography.labelSmall, color = TextMuted)
+                                Text("Total Steps", style = MaterialTheme.typography.labelSmall, color = SubtitleMuted)
                                 Text(
                                     "${uiState.userProfile.totalSteps}",
                                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = DarkSlatePrimary
+                                    color = DarkTitleColor
                                 )
                             }
                         }
@@ -220,14 +241,127 @@ fun ProfileScreen(
                         showAccountDetailsDialog = false
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = AccentTeal),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.testTag("save_profile_button")
                 ) {
                     Text("Save Changes", color = Color.White)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showAccountDetailsDialog = false }) {
-                    Text("Cancel", color = TextMuted)
+                    Text("Cancel", color = SubtitleMuted)
+                }
+            }
+        )
+    }
+
+    // Themes Dialog
+    if (showThemesDialog) {
+        AlertDialog(
+            onDismissRequest = { showThemesDialog = false },
+            title = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(ItemThemesPeach),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Palette,
+                            contentDescription = null,
+                            tint = ItemThemesIconDark,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Text(
+                        text = "Visual Themes",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = DarkTitleColor
+                    )
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    val themes = listOf(
+                        Triple("Classic Mint", "Clean pastel palette inspired by campus greens", listOf(Color(0xFFD7F5E4), Color(0xFFA5E6CF))),
+                        Triple("Sunset Pastel", "Warm tones inspired by twilight hostel walks", listOf(Color(0xFFFFECC7), Color(0xFFFF9E79))),
+                        Triple("Lavender Breeze", "Serene violet and periwinkle gradients", listOf(Color(0xFFE2E6FF), Color(0xFFBCC6FA))),
+                        Triple("Obsidian Neon", "Dark high-contrast canvas with neon glow accents", listOf(Color(0xFF16211B), Color(0xFF00F5D4)))
+                    )
+
+                    themes.forEach { (name, desc, colors) ->
+                        val isSelected = uiState.selectedTheme == name
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = if (isSelected) AccentMintLight else CreamSurface,
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.5.dp,
+                                if (isSelected) AccentTeal else BorderSubtle
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(14.dp))
+                                .clickable {
+                                    viewModel.setTheme(name)
+                                    showThemesDialog = false
+                                }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .clip(CircleShape)
+                                            .background(
+                                                Brush.linearGradient(colors)
+                                            )
+                                    )
+                                    Column {
+                                        Text(
+                                            text = name,
+                                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                            color = DarkTitleColor
+                                        )
+                                        Text(
+                                            text = desc,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = SubtitleMuted
+                                        )
+                                    }
+                                }
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.CheckCircle,
+                                        contentDescription = "Selected",
+                                        tint = AccentTeal,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showThemesDialog = false }) {
+                    Text("Close", color = DarkTitleColor)
                 }
             }
         )
@@ -238,7 +372,7 @@ fun ProfileScreen(
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
             title = {
-                Text("Log Out", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = DarkSlatePrimary)
+                Text("Log Out", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = DarkTitleColor)
             },
             text = {
                 Text(
@@ -251,70 +385,26 @@ fun ProfileScreen(
                 Button(
                     onClick = {
                         viewModel.logout()
-                        isLoggedOutState = true
                         showLogoutDialog = false
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = LogoutRed),
-                    shape = RoundedCornerShape(12.dp)
+                    colors = ButtonDefaults.buttonColors(containerColor = LogoutPillTextColor),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.testTag("confirm_logout_button")
                 ) {
                     Text("Log Out", color = Color.White)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showLogoutDialog = false }) {
-                    Text("Cancel", color = TextMuted)
+                    Text("Cancel", color = SubtitleMuted)
                 }
             }
         )
     }
 
     Scaffold(
-        containerColor = MintBackground,
+        containerColor = CanvasBackground,
         contentWindowInsets = WindowInsets.safeDrawing,
-        bottomBar = {
-            // Centered Share Button at bottom as visible in reference design
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(16.dp))
-                        .clickable {
-                            val shareIntent = Intent().apply {
-                                action = Intent.ACTION_SEND
-                                type = "text/plain"
-                                putExtra(
-                                    Intent.EXTRA_TEXT,
-                                    "Check out my walking route artworks on PathCanvas! Created by ${uiState.userProfile.username.ifEmpty { "James" }} with ${uiState.totalArtworksCount} generative artworks."
-                                )
-                            }
-                            context.startActivity(Intent.createChooser(shareIntent, "Share Profile"))
-                        }
-                        .padding(horizontal = 24.dp, vertical = 8.dp)
-                        .testTag("profile_bottom_share_button")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Share,
-                        contentDescription = "Share",
-                        tint = DarkSlatePrimary,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Share",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 13.sp
-                        ),
-                        color = DarkSlatePrimary
-                    )
-                }
-            }
-        },
         modifier = modifier
     ) { paddingValues ->
         Column(
@@ -322,42 +412,42 @@ fun ProfileScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 16.dp)
+                .padding(horizontal = 22.dp, vertical = 12.dp)
         ) {
-            // 1. Top Bar: "Your Profile" + Wavy Brush Stroke Underline (Left) & Circular Avatar Button (Right)
+            // 1. Top Bar: "Your Profile" + Soft Wavy Brush Stroke Underline (Left) & Circular Avatar Button (Right)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 24.dp),
+                    .padding(top = 4.dp, bottom = 22.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Left: "Your Profile" Title with stylized green underline
+                // Left: "Your Profile" Title with green organic brush stroke underline
                 Column {
                     Text(
                         text = "Your Profile",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.ExtraBold,
-                            fontSize = 17.sp
+                            fontSize = 18.sp
                         ),
-                        color = DarkSlatePrimary
+                        color = DarkTitleColor
                     )
-                    Spacer(modifier = Modifier.height(3.dp))
-                    // Green brush stroke / wave underline
-                    Canvas(modifier = Modifier.size(width = 46.dp, height = 5.dp)) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    // Subtle organic curved green underline as seen in screenshot
+                    Canvas(modifier = Modifier.size(width = 64.dp, height = 6.dp)) {
                         val path = Path().apply {
                             moveTo(1f, size.height * 0.7f)
                             cubicTo(
                                 size.width * 0.35f, 0f,
-                                size.width * 0.7f, size.height,
-                                size.width - 1f, size.height * 0.3f
+                                size.width * 0.75f, size.height * 0.95f,
+                                size.width - 1f, size.height * 0.4f
                             )
                         }
                         drawPath(
                             path = path,
-                            color = HeroTealTag,
+                            color = GreenUnderlineColor,
                             style = Stroke(
-                                width = 3.5f,
+                                width = 3.2f,
                                 cap = StrokeCap.Round,
                                 join = StrokeJoin.Round
                             )
@@ -365,14 +455,14 @@ fun ProfileScreen(
                     }
                 }
 
-                // Right: Circular White Avatar Button
+                // Right: Circular Avatar Button with subtle border
                 Surface(
                     shape = CircleShape,
-                    color = SurfaceCard,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+                    color = Color.White,
+                    border = androidx.compose.foundation.BorderStroke(1.2.dp, BorderSubtle),
                     shadowElevation = 0.5.dp,
                     modifier = Modifier
-                        .size(42.dp)
+                        .size(40.dp)
                         .clip(CircleShape)
                         .clickable { showAccountDetailsDialog = true }
                         .testTag("profile_avatar_button")
@@ -381,43 +471,43 @@ fun ProfileScreen(
                         Icon(
                             imageVector = Icons.Outlined.Person,
                             contentDescription = "User Avatar",
-                            tint = DarkSlatePrimary,
-                            modifier = Modifier.size(22.dp)
+                            tint = DarkTitleColor,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }
             }
 
-            // 2. Greeting Header: "Hello James" & "Live. Move. Create."
-            val displayName = uiState.userProfile.username.ifEmpty { "James" }
+            // 2. Greeting Header: "Hi Neeraj" & "Live. Move. Create."
+            val displayName = uiState.userProfile.username.ifEmpty { "Neeraj" }
             Text(
-                text = "Hello $displayName",
+                text = "Hi $displayName",
                 style = MaterialTheme.typography.displayLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 32.sp,
-                    letterSpacing = (-0.5).sp
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 34.sp,
+                    letterSpacing = (-0.6).sp
                 ),
-                color = DarkSlatePrimary
+                color = DarkTitleColor
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = "Live. Move. Create.",
                 style = MaterialTheme.typography.bodyLarge.copy(
                     fontSize = 15.sp,
-                    color = TextMuted
+                    color = SubtitleMuted
                 )
             )
 
             Spacer(modifier = Modifier.height(22.dp))
 
-            // 3. Hero Gradient Button: "Account details" (Mint -> Lavender gradient)
+            // 3. Hero Card: "Account details" (Smooth Mint-to-Lavender Gradient Pill)
             Surface(
-                shape = RoundedCornerShape(22.dp),
+                shape = RoundedCornerShape(26.dp),
                 color = Color.Transparent,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(64.dp)
-                    .clip(RoundedCornerShape(22.dp))
+                    .height(66.dp)
+                    .clip(RoundedCornerShape(26.dp))
                     .clickable { showAccountDetailsDialog = true }
                     .testTag("account_details_button")
             ) {
@@ -427,8 +517,8 @@ fun ProfileScreen(
                         .background(
                             Brush.horizontalGradient(
                                 colors = listOf(
-                                    AccountGradientStart,
-                                    AccountGradientEnd
+                                    GradientStartMint,
+                                    GradientEndLavender
                                 )
                             )
                         )
@@ -439,176 +529,255 @@ fun ProfileScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        // Circular translucent frosted badge icon
+                        // Semi-transparent rounded white circular icon container
                         Surface(
                             shape = CircleShape,
-                            color = Color.White.copy(alpha = 0.35f),
-                            modifier = Modifier.size(40.dp)
+                            color = Color.White.copy(alpha = 0.55f),
+                            modifier = Modifier.size(38.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
-                                    imageVector = Icons.Default.Badge,
-                                    contentDescription = null,
-                                    tint = DarkSlatePrimary,
-                                    modifier = Modifier.size(20.dp)
+                                    imageVector = Icons.Outlined.CreditCard,
+                                    contentDescription = "Account details",
+                                    tint = DarkTitleColor,
+                                    modifier = Modifier.size(19.dp)
                                 )
                             }
                         }
 
-                        // Text: "Account details"
+                        // Label: "Account details"
                         Text(
                             text = "Account details",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp
                             ),
-                            color = DarkSlatePrimary
+                            color = DarkTitleColor
                         )
                     }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(28.dp))
-
-            // 4. "Recent" Section Title
-            Text(
-                text = "Recent",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp
-                ),
-                color = DarkSlatePrimary
-            )
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // 5. Recent Item 1: "Your artworks" (Soft Mint Pill Card)
-            Surface(
-                shape = RoundedCornerShape(20.dp),
-                color = SoftMintRecent,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
-                    .clickable(onClick = onNavigateToArtworks)
-                    .testTag("recent_your_artworks_button")
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Palette,
-                            contentDescription = null,
-                            tint = HeroTealTag,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Text(
-                            text = "Your artworks",
-                            style = MaterialTheme.typography.labelLarge.copy(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 15.sp
-                            ),
-                            color = DarkSlatePrimary
-                        )
-                    }
-
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = "Go",
-                        tint = DarkSlateSecondary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // 6. Recent Item 2: "Colour gallery" (Soft Lavender Pill Card)
-            Surface(
-                shape = RoundedCornerShape(20.dp),
-                color = SoftLavenderRecent,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
-                    .clickable(onClick = onNavigateToColourGallery)
-                    .testTag("recent_colour_gallery_button")
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.MenuBook,
-                            contentDescription = null,
-                            tint = AccentLavender,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Text(
-                            text = "Colour gallery",
-                            style = MaterialTheme.typography.labelLarge.copy(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 15.sp
-                            ),
-                            color = DarkSlatePrimary
-                        )
-                    }
-
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = "Go",
-                        tint = DarkSlateSecondary,
-                        modifier = Modifier.size(20.dp)
-                    )
                 }
             }
 
             Spacer(modifier = Modifier.height(22.dp))
 
-            // 7. Subtle Divider
-            HorizontalDivider(
-                color = BorderSubtle,
-                thickness = 1.dp,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(22.dp))
-
-            // 8. Logout Pill Card: "Log out" (Soft Light Red Pill Card)
+            // 4. "Recent" Framed Container Card with outline
             Surface(
-                shape = RoundedCornerShape(20.dp),
-                color = SoftLogoutPill,
+                shape = RoundedCornerShape(26.dp),
+                color = Color.Transparent,
+                border = androidx.compose.foundation.BorderStroke(1.4.dp, RecentCardBorder),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
+                    .testTag("recent_card_container")
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(18.dp)
+                ) {
+                    // Header: "Recent"
+                    Text(
+                        text = "Recent",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 18.sp
+                        ),
+                        color = DarkTitleColor
+                    )
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Row 1: "Your artworks" (Pastel Soft Mint Pill)
+                    Surface(
+                        shape = RoundedCornerShape(18.dp),
+                        color = ItemArtworksMint,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(18.dp))
+                            .clickable(onClick = onNavigateToArtworks)
+                            .testTag("recent_your_artworks_button")
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 13.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = Color.White.copy(alpha = 0.75f),
+                                    modifier = Modifier.size(34.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = Icons.Default.Public,
+                                            contentDescription = null,
+                                            tint = ItemArtworksIconDark,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = "Your artworks",
+                                    style = MaterialTheme.typography.labelLarge.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 15.sp
+                                    ),
+                                    color = DarkTitleColor
+                                )
+                            }
+
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = "Go",
+                                tint = SubtitleMuted,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Row 2: "Colour gallery" (Pastel Soft Lilac Pill)
+                    Surface(
+                        shape = RoundedCornerShape(18.dp),
+                        color = ItemGalleryLavender,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(18.dp))
+                            .clickable(onClick = onNavigateToColourGallery)
+                            .testTag("recent_colour_gallery_button")
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 13.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = Color.White.copy(alpha = 0.75f),
+                                    modifier = Modifier.size(34.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.MenuBook,
+                                            contentDescription = null,
+                                            tint = ItemGalleryIconDark,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = "Colour gallery",
+                                    style = MaterialTheme.typography.labelLarge.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 15.sp
+                                    ),
+                                    color = DarkTitleColor
+                                )
+                            }
+
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = "Go",
+                                tint = SubtitleMuted,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Row 3: "Themes" (Pastel Soft Peach/Cream-Orange Pill)
+                    Surface(
+                        shape = RoundedCornerShape(18.dp),
+                        color = ItemThemesPeach,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(18.dp))
+                            .clickable { showThemesDialog = true }
+                            .testTag("recent_themes_button")
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 13.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = Color.White.copy(alpha = 0.75f),
+                                    modifier = Modifier.size(34.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = Icons.Default.Public,
+                                            contentDescription = null,
+                                            tint = ItemThemesIconDark,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = "Themes",
+                                    style = MaterialTheme.typography.labelLarge.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 15.sp
+                                    ),
+                                    color = DarkTitleColor
+                                )
+                            }
+
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = "Go",
+                                tint = SubtitleMuted,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // 5. "Log out" Button (Soft Pastel Pink Pill)
+            Surface(
+                shape = RoundedCornerShape(22.dp),
+                color = LogoutPillBackground,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(22.dp))
                     .clickable { showLogoutDialog = true }
                     .testTag("profile_logout_button")
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                        .padding(horizontal = 18.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Logout,
                         contentDescription = "Log out",
-                        tint = LogoutRed,
-                        modifier = Modifier.size(20.dp)
+                        tint = LogoutPillTextColor,
+                        modifier = Modifier.size(19.dp)
                     )
                     Text(
                         text = "Log out",
@@ -616,10 +785,12 @@ fun ProfileScreen(
                             fontWeight = FontWeight.Bold,
                             fontSize = 15.sp
                         ),
-                        color = LogoutRed
+                        color = LogoutPillTextColor
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }

@@ -11,10 +11,11 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 data class ProfileUiState(
-    val userProfile: UserProfileEntity = UserProfileEntity(username = "James"),
+    val userProfile: UserProfileEntity = UserProfileEntity(username = "Neeraj"),
     val recentRoutes: List<WalkRouteEntity> = emptyList(),
     val unlockedBadges: List<BadgeEntity> = emptyList(),
     val totalArtworksCount: Int = 0,
+    val selectedTheme: String = "Classic Mint",
     val isLoggedOut: Boolean = false,
     val isLoading: Boolean = false
 )
@@ -33,7 +34,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                 repository.allBadges
             ) { profile, routes, badges ->
                 ProfileUiState(
-                    userProfile = profile ?: UserProfileEntity(username = "James"),
+                    userProfile = profile ?: UserProfileEntity(username = "Neeraj"),
                     recentRoutes = routes.take(5),
                     unlockedBadges = badges.filter { it.isUnlocked },
                     totalArtworksCount = routes.size,
@@ -43,6 +44,10 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                 _uiState.value = state
             }
         }
+    }
+
+    fun setTheme(theme: String) {
+        _uiState.update { it.copy(selectedTheme = theme) }
     }
 
     fun updateProfile(name: String, studentId: String, hostel: String, department: String) {
