@@ -18,11 +18,108 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.data.model.WalkRouteEntity
 import com.example.ui.theme.*
+
+/**
+ * Clean square Creation Card matching the home page design reference
+ */
+@Composable
+fun CreationCardItem(
+    route: WalkRouteEntity,
+    index: Int = 0,
+    onClick: () -> Unit,
+    onFavoriteToggle: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val heartColor by animateColorAsState(
+        targetValue = if (route.isFavorite) AccentLavender else TextMuted.copy(alpha = 0.5f),
+        animationSpec = spring(),
+        label = "heartColor"
+    )
+
+    // Soft pastel glowing background per card
+    val glowColor = when (index % 4) {
+        0 -> Color(0xFFE3F8EE) // Mint
+        1 -> Color(0xFFECE7FF) // Lavender
+        2 -> Color(0xFFE3F0FD) // Soft Blue
+        else -> Color(0xFFF1FCE4) // Lime
+    }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier
+            .width(80.dp)
+            .clickable(onClick = onClick)
+            .testTag("creation_card_${route.id}")
+    ) {
+        // Square Artwork Card
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = SurfaceCard,
+            border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+            shadowElevation = 0.5.dp,
+            modifier = Modifier
+                .size(80.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(
+                                glowColor.copy(alpha = 0.9f),
+                                SurfaceCard
+                            )
+                        )
+                    )
+                    .padding(6.dp)
+            ) {
+                // Generative artwork mini canvas
+                ArtCanvasView(
+                    pointsJson = route.pointsJson,
+                    blobsJson = route.blobsJson,
+                    artStyle = route.artStyle,
+                    modifier = Modifier.fillMaxSize()
+                )
+
+                // Favorite Heart Badge Top-Right
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .size(20.dp)
+                        .clickable { onFavoriteToggle(!route.isFavorite) }
+                        .testTag("creation_fav_${route.id}"),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (route.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                        contentDescription = "Favorite",
+                        tint = heartColor,
+                        modifier = Modifier.size(13.dp)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        // Date text underneath (e.g. "23 Feb")
+        Text(
+            text = formatShortDate(route.dateString),
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                fontSize = 12.sp
+            ),
+            color = DarkSlatePrimary
+        )
+    }
+}
 
 @Composable
 fun ArtworkThumbnailCard(
@@ -40,9 +137,9 @@ fun ArtworkThumbnailCard(
 
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(22.dp))
             .background(SurfaceCard)
-            .border(1.dp, BorderSubtle, RoundedCornerShape(20.dp))
+            .border(1.dp, BorderSubtle, RoundedCornerShape(22.dp))
             .clickable(onClick = onClick)
             .padding(10.dp)
             .testTag("artwork_card_${route.id}")
@@ -51,8 +148,8 @@ fun ArtworkThumbnailCard(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(1.1f)
-                .clip(RoundedCornerShape(14.dp))
+                .aspectRatio(1.05f)
+                .clip(RoundedCornerShape(16.dp))
                 .background(SurfaceCardMuted)
                 .padding(8.dp)
         ) {
@@ -89,10 +186,10 @@ fun ArtworkThumbnailCard(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .size(28.dp)
-                    .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.85f))
-                    .clickable { onFavoriteToggle(!route.isFavorite) }
-                    .testTag("fav_btn_${route.id}"),
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.85f))
+                .clickable { onFavoriteToggle(!route.isFavorite) }
+                .testTag("fav_btn_${route.id}"),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -114,7 +211,9 @@ fun ArtworkThumbnailCard(
         ) {
             Text(
                 text = formatShortDate(route.dateString),
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                ),
                 color = DarkSlatePrimary
             )
             Text(

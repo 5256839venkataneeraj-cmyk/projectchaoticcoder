@@ -2,38 +2,40 @@ package com.example.ui.home
 
 import android.content.Intent
 import androidx.compose.animation.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.data.model.WalkRouteEntity
 import com.example.ui.components.ArtCanvasView
 import com.example.ui.components.ArtworkThumbnailCard
+import com.example.ui.components.CreationCardItem
 import com.example.ui.components.StoryCardView
 import com.example.ui.theme.*
 import com.example.util.ArtworkShareHelper
@@ -51,8 +53,10 @@ fun HomeScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     var showSyncDialog by remember { mutableStateOf(false) }
+    var showMenuDialog by remember { mutableStateOf(false) }
     var sharingRoute by remember { mutableStateOf<WalkRouteEntity?>(null) }
     var isSharingProgress by remember { mutableStateOf(false) }
+    var isViewAllGrid by remember { mutableStateOf(false) }
 
     val displayedRoutes = when (uiState.selectedFilter) {
         HomeFilter.ALL -> uiState.routes
@@ -62,6 +66,7 @@ fun HomeScreen(
     val clipboardManager = LocalClipboardManager.current
     var showLogsExpanded by remember { mutableStateOf(false) }
 
+    // Sync Diagnostics Dialog
     if (showSyncDialog) {
         AlertDialog(
             onDismissRequest = { showSyncDialog = false },
@@ -101,7 +106,7 @@ fun HomeScreen(
                                 Text(text = "💾", fontSize = 16.sp)
                                 Text(
                                     text = "Local Storage (Room DB): Active & Safe",
-                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
+                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                                     color = DarkSlatePrimary
                                 )
                             }
@@ -131,7 +136,7 @@ fun HomeScreen(
                                 Text(text = "☁️", fontSize = 16.sp)
                                 Text(
                                     text = "Firebase Cloud Sync Status",
-                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
+                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                                     color = DarkSlatePrimary
                                 )
                             }
@@ -176,7 +181,7 @@ fun HomeScreen(
                                         Text(
                                             text = "Diagnostics Log (${logs.size})",
                                             style = MaterialTheme.typography.labelSmall.copy(
-                                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                                fontWeight = FontWeight.Bold,
                                                 color = Color.White
                                             )
                                         )
@@ -283,6 +288,84 @@ fun HomeScreen(
         )
     }
 
+    // Quick Menu Dialog (triggered by ☰ button)
+    if (showMenuDialog) {
+        AlertDialog(
+            onDismissRequest = { showMenuDialog = false },
+            title = {
+                Text("Campus Navigation & Tools", style = MaterialTheme.typography.titleMedium, color = DarkSlatePrimary)
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = SurfaceCardMuted,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                showMenuDialog = false
+                                onNavigateToTracker()
+                            }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(Icons.Default.DirectionsWalk, contentDescription = null, tint = AccentMint)
+                            Text("Start GPS Walk Tracker", style = MaterialTheme.typography.labelLarge, color = DarkSlatePrimary)
+                        }
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = SurfaceCardMuted,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                showMenuDialog = false
+                                showSyncDialog = true
+                            }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(Icons.Default.CloudSync, contentDescription = null, tint = AccentLavender)
+                            Text("Sync Diagnostics & Cloud", style = MaterialTheme.typography.labelLarge, color = DarkSlatePrimary)
+                        }
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = SurfaceCardMuted,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                showMenuDialog = false
+                                onNavigateToProfile()
+                            }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(Icons.Default.Person, contentDescription = null, tint = DarkSlateSecondary)
+                            Text("Profile & Achievements", style = MaterialTheme.typography.labelLarge, color = DarkSlatePrimary)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showMenuDialog = false }) {
+                    Text("Close", color = DarkSlateSecondary)
+                }
+            }
+        )
+    }
+
     Scaffold(
         containerColor = MintBackground,
         contentWindowInsets = WindowInsets.safeDrawing
@@ -294,164 +377,147 @@ fun HomeScreen(
                 .verticalScroll(scrollState)
                 .padding(horizontal = 20.dp, vertical = 12.dp)
         ) {
-            // Top App Bar
+            // 1. Top App Bar: Circular Back Button (Left) & Circular Menu Button (Right)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 16.dp),
+                    .padding(bottom = 18.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
+                // Circular White Back Button `<`
+                Surface(
+                    shape = CircleShape,
+                    color = SurfaceCard,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+                    shadowElevation = 0.5.dp,
                     modifier = Modifier
-                        .size(40.dp)
+                        .size(42.dp)
                         .clip(CircleShape)
-                        .background(SurfaceCard)
-                        .border(1.dp, BorderSubtle, CircleShape)
                         .clickable { onNavigateToTracker() }
-                        .testTag("map_shortcut_button"),
-                    contentAlignment = Alignment.Center
+                        .testTag("top_back_button")
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.DirectionsWalk,
-                        contentDescription = "Track Walk",
-                        tint = DarkSlatePrimary,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = DarkSlatePrimary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
 
-                // Decorative stylized green ribbon motif and cloud sync in top corner
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                // Circular White Hamburger Menu Button `☰`
+                Surface(
+                    shape = CircleShape,
+                    color = SurfaceCard,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+                    shadowElevation = 0.5.dp,
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .clickable { showMenuDialog = true }
+                        .testTag("top_menu_button")
                 ) {
-                    // Cloud Sync Button / Badge
-                    val currentSync = uiState.syncState
-                    Surface(
-                        shape = RoundedCornerShape(20.dp),
-                        color = when (currentSync) {
-                            is com.example.data.sync.SyncState.Syncing -> AccentLavenderLight
-                            is com.example.data.sync.SyncState.Success -> if (currentSync.isCloudSynced) AccentMintLight else AccentLavenderLight
-                            is com.example.data.sync.SyncState.Error -> Color(0xFFFFEBEE)
-                            else -> SurfaceCard
-                        },
-                        border = androidx.compose.foundation.BorderStroke(
-                            1.dp,
-                            if (currentSync is com.example.data.sync.SyncState.Error) Color(0xFFFFCDD2) else BorderSubtle
-                        ),
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(20.dp))
-                            .clickable {
-                                if (currentSync is com.example.data.sync.SyncState.Error || currentSync is com.example.data.sync.SyncState.Idle) {
-                                    viewModel.syncFirestore()
-                                } else {
-                                    showSyncDialog = true
-                                }
-                            }
-                            .testTag("top_bar_sync_chip")
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            if (currentSync is com.example.data.sync.SyncState.Syncing) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(12.dp),
-                                    strokeWidth = 2.dp,
-                                    color = AccentLavender
-                                )
-                            } else {
-                                Icon(
-                                    imageVector = when (currentSync) {
-                                        is com.example.data.sync.SyncState.Error -> Icons.Default.SyncProblem
-                                        is com.example.data.sync.SyncState.Success -> if (currentSync.isCloudSynced) Icons.Default.CloudDone else Icons.Default.CloudQueue
-                                        else -> Icons.Default.CloudSync
-                                    },
-                                    contentDescription = "Sync Cloud",
-                                    tint = if (currentSync is com.example.data.sync.SyncState.Error) Color(0xFFD32F2F) else DarkSlatePrimary,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                            Text(
-                                text = when (currentSync) {
-                                    is com.example.data.sync.SyncState.Syncing -> "Syncing..."
-                                    is com.example.data.sync.SyncState.Success -> if (currentSync.isCloudSynced) "Cloud Synced" else "Saved Locally"
-                                    is com.example.data.sync.SyncState.Error -> "Sync Failed • Tap Retry"
-                                    else -> "Sync Cloud"
-                                },
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontWeight = if (currentSync is com.example.data.sync.SyncState.Error) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Medium
-                                ),
-                                color = if (currentSync is com.example.data.sync.SyncState.Error) Color(0xFFD32F2F) else DarkSlatePrimary
-                            )
-                        }
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(SurfaceCard)
-                            .border(1.dp, BorderSubtle, CircleShape)
-                            .clickable { onNavigateToProfile() }
-                            .testTag("more_button"),
-                        contentAlignment = Alignment.Center
-                    ) {
+                    Box(contentAlignment = Alignment.Center) {
                         Icon(
-                            imageVector = Icons.Default.MoreHoriz,
-                            contentDescription = "More",
-                            tint = DarkSlatePrimary
+                            imageVector = Icons.Default.Menu,
+                            contentDescription = "Menu",
+                            tint = DarkSlatePrimary,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }
             }
 
-            // Header Title & Slogan
-            Text(
-                text = "Your artworks",
-                style = MaterialTheme.typography.displayLarge,
-                color = DarkSlatePrimary
-            )
-            Text(
-                text = "Every walk. Every art.",
-                style = MaterialTheme.typography.bodyLarge,
-                color = TextMuted,
-                modifier = Modifier.padding(top = 4.dp, bottom = 18.dp)
-            )
+            // 2. Header Title: "Your artworks ✦"
+            Row(
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "Your artworks",
+                    style = MaterialTheme.typography.displayLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 33.sp,
+                        letterSpacing = (-0.5).sp
+                    ),
+                    color = DarkSlatePrimary
+                )
+                // Teal 4-point sparkle star ✦
+                Text(
+                    text = "✦",
+                    fontSize = 20.sp,
+                    color = SparkleTeal,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+            }
 
-            // Segmented Filter Pills (All / Favorites)
+            // Subtitle: "Every walk. Every art." with green ribbon squiggle ~
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.padding(top = 4.dp, bottom = 18.dp)
+            ) {
+                Text(
+                    text = "Every walk. Every art.",
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontSize = 15.sp,
+                        color = TextMuted
+                    )
+                )
+
+                // Stylized green ribbon squiggle curve ~
+                Canvas(modifier = Modifier.size(width = 46.dp, height = 12.dp)) {
+                    val path = Path().apply {
+                        moveTo(2f, size.height * 0.7f)
+                        cubicTo(
+                            size.width * 0.35f, size.height * 0.1f,
+                            size.width * 0.65f, size.height * 1.1f,
+                            size.width - 2f, size.height * 0.3f
+                        )
+                    }
+                    drawPath(
+                        path = path,
+                        color = SparkleTeal,
+                        style = Stroke(
+                            width = 2.5f,
+                            cap = StrokeCap.Round,
+                            join = StrokeJoin.Round
+                        )
+                    )
+                }
+            }
+
+            // 3. Segmented Filter Pills (All / Favorites)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    .padding(bottom = 18.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 // All Pill
                 val isAllSelected = uiState.selectedFilter == HomeFilter.ALL
                 Surface(
-                    shape = RoundedCornerShape(24.dp),
-                    color = if (isAllSelected) BlackPill else SurfaceCard,
+                    shape = RoundedCornerShape(22.dp),
+                    color = if (isAllSelected) SoftMintPill else SurfaceCard,
                     border = if (isAllSelected) null else androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
                     modifier = Modifier
+                        .clip(RoundedCornerShape(22.dp))
                         .clickable { viewModel.setFilter(HomeFilter.ALL) }
                         .testTag("filter_all_button")
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 22.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    Box(
+                        modifier = Modifier.padding(horizontal = 22.dp, vertical = 8.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Outlined.GridView,
-                            contentDescription = null,
-                            tint = if (isAllSelected) Color.White else DarkSlatePrimary,
-                            modifier = Modifier.size(18.dp)
-                        )
                         Text(
                             text = "All",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = if (isAllSelected) Color.White else DarkSlatePrimary
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                fontWeight = if (isAllSelected) FontWeight.Bold else FontWeight.Medium,
+                                fontSize = 14.sp
+                            ),
+                            color = DarkSlatePrimary
                         )
                     }
                 }
@@ -459,40 +525,262 @@ fun HomeScreen(
                 // Favorites Pill
                 val isFavSelected = uiState.selectedFilter == HomeFilter.FAVORITES
                 Surface(
-                    shape = RoundedCornerShape(24.dp),
-                    color = if (isFavSelected) BlackPill else SurfaceCard,
+                    shape = RoundedCornerShape(22.dp),
+                    color = if (isFavSelected) SoftMintPill else SurfaceCard,
                     border = if (isFavSelected) null else androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
                     modifier = Modifier
+                        .clip(RoundedCornerShape(22.dp))
                         .clickable { viewModel.setFilter(HomeFilter.FAVORITES) }
                         .testTag("filter_favorites_button")
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 22.dp, vertical = 10.dp),
+                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.FavoriteBorder,
+                            imageVector = if (isFavSelected) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                             contentDescription = null,
-                            tint = if (isFavSelected) Color.White else DarkSlatePrimary,
-                            modifier = Modifier.size(18.dp)
+                            tint = if (isFavSelected) AccentLavender else TextMuted,
+                            modifier = Modifier.size(16.dp)
                         )
                         Text(
                             text = "Favorites",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = if (isFavSelected) Color.White else DarkSlatePrimary
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                fontWeight = if (isFavSelected) FontWeight.Bold else FontWeight.Medium,
+                                fontSize = 14.sp
+                            ),
+                            color = DarkSlatePrimary
                         )
                         if (uiState.favoriteRoutes.isNotEmpty()) {
-                            Box(
-                                modifier = Modifier
-                                    .clip(CircleShape)
-                                    .background(if (isFavSelected) AccentLavender else AccentLavenderContainer)
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            Text(
+                                text = "(${uiState.favoriteRoutes.size})",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = TextMuted
+                            )
+                        }
+                    }
+                }
+            }
+
+            // 4. Hero Card: "TODAY'S ARTWORK"
+            val todaysRoute = uiState.todaysRoute
+            if (todaysRoute != null && uiState.selectedFilter == HomeFilter.ALL) {
+                Surface(
+                    shape = RoundedCornerShape(28.dp),
+                    color = HeroCardMint,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 24.dp)
+                        .testTag("todays_artwork_hero")
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(18.dp)
+                    ) {
+                        // Top Section: Left Details & Right Square Artwork Card
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Left Details Column
+                            Column(
+                                modifier = Modifier.weight(1.15f),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 Text(
-                                    text = "${uiState.favoriteRoutes.size}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = if (isFavSelected) Color.White else DarkSlatePrimary
+                                    text = "TODAY'S ARTWORK",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp,
+                                        letterSpacing = 0.6.sp
+                                    ),
+                                    color = HeroTealTag
+                                )
+
+                                // Bold Multi-line Date
+                                val dateParts = todaysRoute.dateString.split(" ")
+                                val dateLine1 = if (dateParts.size >= 2) "${dateParts[0]} ${dateParts[1]}" else todaysRoute.dateString
+                                val dateLine2 = if (dateParts.size >= 3) dateParts[2] else ""
+
+                                Column {
+                                    Text(
+                                        text = dateLine1,
+                                        style = MaterialTheme.typography.titleLarge.copy(
+                                            fontWeight = FontWeight.ExtraBold,
+                                            fontSize = 24.sp,
+                                            lineHeight = 28.sp
+                                        ),
+                                        color = DarkSlatePrimary
+                                    )
+                                    if (dateLine2.isNotEmpty()) {
+                                        Text(
+                                            text = dateLine2,
+                                            style = MaterialTheme.typography.titleLarge.copy(
+                                                fontWeight = FontWeight.ExtraBold,
+                                                fontSize = 24.sp,
+                                                lineHeight = 28.sp
+                                            ),
+                                            color = DarkSlatePrimary
+                                        )
+                                    }
+                                }
+
+                                Text(
+                                    text = "Created from your ${todaysRoute.distanceKm} km journey",
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+                                    color = TextMuted
+                                )
+
+                                Spacer(modifier = Modifier.height(2.dp))
+
+                                // Metrics Chips Row (Steps & Distance)
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    // Steps
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(28.dp)
+                                                .clip(CircleShape)
+                                                .background(AccentMintLight),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(text = "👟", fontSize = 12.sp)
+                                        }
+                                        Column {
+                                            Text(
+                                                text = "${todaysRoute.steps}",
+                                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                                color = DarkSlatePrimary
+                                            )
+                                            Text(
+                                                text = "steps",
+                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                                color = TextMuted
+                                            )
+                                        }
+                                    }
+
+                                    // Distance
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(28.dp)
+                                                .clip(CircleShape)
+                                                .background(AccentMintLight),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(text = "📍", fontSize = 12.sp)
+                                        }
+                                        Column {
+                                            Text(
+                                                text = "${todaysRoute.distanceKm}",
+                                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                                color = DarkSlatePrimary
+                                            )
+                                            Text(
+                                                text = "km",
+                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                                color = TextMuted
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Right Square Artwork Preview Card
+                            Surface(
+                                shape = RoundedCornerShape(22.dp),
+                                color = SurfaceCard,
+                                shadowElevation = 1.dp,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color.White),
+                                modifier = Modifier
+                                    .weight(0.95f)
+                                    .aspectRatio(1f)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(
+                                            Brush.linearGradient(
+                                                colors = listOf(
+                                                    AccentMintLight.copy(alpha = 0.6f),
+                                                    AccentLavenderLight.copy(alpha = 0.6f)
+                                                )
+                                            )
+                                        )
+                                        .padding(8.dp)
+                                ) {
+                                    // Artwork Canvas View
+                                    ArtCanvasView(
+                                        pointsJson = todaysRoute.pointsJson,
+                                        blobsJson = todaysRoute.blobsJson,
+                                        artStyle = todaysRoute.artStyle,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+
+                                    // Sparkles on canvas frame
+                                    Text(
+                                        text = "✦",
+                                        color = SparkleTeal,
+                                        fontSize = 14.sp,
+                                        modifier = Modifier.align(Alignment.TopEnd)
+                                    )
+                                    Text(
+                                        text = "✦",
+                                        color = SparkleTeal,
+                                        fontSize = 12.sp,
+                                        modifier = Modifier.align(Alignment.BottomStart)
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Full-Width Purple Pill Button: "View artwork ->"
+                        Button(
+                            onClick = { onNavigateToStudio(todaysRoute.id) },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = AccentLavender
+                            ),
+                            shape = RoundedCornerShape(24.dp),
+                            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp)
+                                .testTag("view_artwork_button")
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "View artwork",
+                                    style = MaterialTheme.typography.labelLarge.copy(
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    ),
+                                    color = Color.White
+                                )
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
                         }
@@ -500,346 +788,7 @@ fun HomeScreen(
                 }
             }
 
-            // Sync Failure & Visual Retry Banner
-            AnimatedVisibility(
-                visible = uiState.syncState is com.example.data.sync.SyncState.Error,
-                enter = fadeIn() + expandVertically(),
-                exit = fadeOut() + shrinkVertically()
-            ) {
-                val errorState = uiState.syncState as? com.example.data.sync.SyncState.Error
-                if (errorState != null) {
-                    Surface(
-                        shape = RoundedCornerShape(20.dp),
-                        color = Color(0xFFFFF1F2),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFECDD3)),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 20.dp)
-                            .testTag("sync_error_banner")
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            // Header Row with Icon and Category Tag
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(28.dp)
-                                            .clip(CircleShape)
-                                            .background(Color(0xFFFFE4E6)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.SyncProblem,
-                                            contentDescription = "Sync Issue",
-                                            tint = Color(0xFFE11D48),
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    }
-                                    Text(
-                                        text = "Cloud Sync Incomplete",
-                                        style = MaterialTheme.typography.titleSmall.copy(
-                                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
-                                        ),
-                                        color = Color(0xFF9F1239)
-                                    )
-                                }
-
-                                Surface(
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = Color(0xFFFFE4E6)
-                                ) {
-                                    Text(
-                                        text = errorState.rootCauseCategory,
-                                        style = MaterialTheme.typography.labelSmall.copy(
-                                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                                            fontSize = 10.sp
-                                        ),
-                                        color = Color(0xFFBE123C),
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                    )
-                                }
-                            }
-
-                            // Connection Status & Recommendation Details
-                            Text(
-                                text = errorState.errorMessage,
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
-                                ),
-                                color = Color(0xFF881337)
-                            )
-
-                            Text(
-                                text = "💡 ${errorState.recommendation}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Color(0xFF4C0519)
-                            )
-
-                            // Local Storage Safe Guarantee
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = Color(0x33FFFFFF)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.CheckCircle,
-                                        contentDescription = null,
-                                        tint = Color(0xFF059669),
-                                        modifier = Modifier.size(14.dp)
-                                    )
-                                    Text(
-                                        text = "All ${errorState.localRecordsSaved} artworks are safely preserved in on-device database.",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = Color(0xFF065F46)
-                                    )
-                                }
-                            }
-
-                            // Action Buttons Row: Retry Sync and View Logs
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 4.dp),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Button(
-                                    onClick = { viewModel.syncFirestore() },
-                                    shape = RoundedCornerShape(14.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE11D48)),
-                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                                    modifier = Modifier.testTag("retry_sync_button")
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Refresh,
-                                            contentDescription = "Retry Sync",
-                                            tint = Color.White,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        Text(
-                                            text = "Retry Sync",
-                                            style = MaterialTheme.typography.labelMedium.copy(
-                                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
-                                            ),
-                                            color = Color.White
-                                        )
-                                    }
-                                }
-
-                                OutlinedButton(
-                                    onClick = { showSyncDialog = true },
-                                    shape = RoundedCornerShape(14.dp),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFDA4AF)),
-                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                                    modifier = Modifier.testTag("view_sync_logs_button")
-                                ) {
-                                    Text(
-                                        text = "Diagnostics & Logs",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = Color(0xFF9F1239)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Hero Card: "TODAY'S ARTWORK"
-            val todaysRoute = uiState.todaysRoute
-            if (todaysRoute != null && uiState.selectedFilter == HomeFilter.ALL) {
-                Surface(
-                    shape = RoundedCornerShape(26.dp),
-                    color = SurfaceCard,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 24.dp)
-                        .testTag("todays_artwork_hero")
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(14.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // Left Details Column
-                        Column(
-                            modifier = Modifier.weight(1.1f),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(
-                                text = "TODAY'S ARTWORK",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = AccentTeal
-                            )
-                            Text(
-                                text = todaysRoute.dateString,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = DarkSlatePrimary
-                            )
-                            Text(
-                                text = "Created from your ${todaysRoute.distanceKm} km journey",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = TextMuted
-                            )
-
-                            // Metrics Chips Row
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                modifier = Modifier.padding(vertical = 4.dp)
-                            ) {
-                                // Steps
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(26.dp)
-                                            .clip(CircleShape)
-                                            .background(AccentMintLight),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(text = "👟", fontSize = 12.sp)
-                                    }
-                                    Column {
-                                        Text(
-                                            text = "${todaysRoute.steps}",
-                                            style = MaterialTheme.typography.labelLarge,
-                                            color = DarkSlatePrimary
-                                        )
-                                        Text(
-                                            text = "steps",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = TextMuted
-                                        )
-                                    }
-                                }
-
-                                // Distance
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(26.dp)
-                                            .clip(CircleShape)
-                                            .background(AccentLavenderLight),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(text = "📍", fontSize = 12.sp)
-                                    }
-                                    Column {
-                                        Text(
-                                            text = "${todaysRoute.distanceKm}",
-                                            style = MaterialTheme.typography.labelLarge,
-                                            color = DarkSlatePrimary
-                                        )
-                                        Text(
-                                            text = "km",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = TextMuted
-                                        )
-                                    }
-                                }
-                            }
-
-                            // Action Buttons Row: View Artwork & Quick Share
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Button(
-                                    onClick = { onNavigateToStudio(todaysRoute.id) },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = AccentLavender
-                                    ),
-                                    shape = RoundedCornerShape(20.dp),
-                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
-                                    modifier = Modifier.testTag("view_artwork_button")
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                    ) {
-                                        Text(
-                                            text = "View artwork",
-                                            style = MaterialTheme.typography.labelMedium,
-                                            color = Color.White
-                                        )
-                                        Icon(
-                                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                            contentDescription = null,
-                                            tint = Color.White,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    }
-                                }
-
-                                Surface(
-                                    shape = CircleShape,
-                                    color = SurfaceCardMuted,
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
-                                    modifier = Modifier
-                                        .size(38.dp)
-                                        .clip(CircleShape)
-                                        .clickable { sharingRoute = todaysRoute }
-                                        .testTag("hero_share_button")
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(
-                                            imageVector = Icons.Default.Share,
-                                            contentDescription = "Share Today's Artwork",
-                                            tint = DarkSlatePrimary,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        // Right Canvas Preview
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .aspectRatio(1f)
-                                .clip(RoundedCornerShape(18.dp))
-                                .background(SurfaceCardMuted)
-                                .padding(8.dp)
-                        ) {
-                            ArtCanvasView(
-                                pointsJson = todaysRoute.pointsJson,
-                                blobsJson = todaysRoute.blobsJson,
-                                artStyle = todaysRoute.artStyle,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
-                    }
-                }
-            }
-
-            // "Your creations" Section Header
+            // 5. "Your creations" Section Header
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -849,17 +798,27 @@ fun HomeScreen(
             ) {
                 Text(
                     text = "Your creations",
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp
+                    ),
                     color = DarkSlatePrimary
                 )
+
                 Text(
-                    text = "${displayedRoutes.size} artworks",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = AccentLavender
+                    text = if (isViewAllGrid) "Show carousel <" else "View all >",
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp
+                    ),
+                    color = AccentLavender,
+                    modifier = Modifier
+                        .clickable { isViewAllGrid = !isViewAllGrid }
+                        .testTag("view_all_creations_toggle")
                 )
             }
 
-            // Creations Grid (4 rows x 2 columns or dynamic)
+            // 6. Creations Presentation (Horizontal Carousel matching image.png or 2-column Grid)
             if (displayedRoutes.isEmpty()) {
                 Box(
                     modifier = Modifier
@@ -884,8 +843,27 @@ fun HomeScreen(
                         )
                     }
                 }
+            } else if (!isViewAllGrid) {
+                // Horizontal Carousel matching the 4 cards in image.png
+                LazyRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 20.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    itemsIndexed(displayedRoutes) { index, route ->
+                        CreationCardItem(
+                            route = route,
+                            index = index,
+                            onClick = { onNavigateToStudio(route.id) },
+                            onFavoriteToggle = { isFav ->
+                                viewModel.toggleFavorite(route.id, isFav)
+                            }
+                        )
+                    }
+                }
             } else {
-                // Render 2-column grid chunked
+                // Render 2-column grid when "View all >" is active
                 val chunked = displayedRoutes.chunked(2)
                 chunked.forEach { rowItems ->
                     Row(
@@ -914,9 +892,9 @@ fun HomeScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // Monthly Summary Banner (e.g. "February 2024 • 12 walks • 12 artworks")
+            // Monthly Summary Banner
             Surface(
                 shape = RoundedCornerShape(20.dp),
                 color = SurfaceCard,
@@ -964,7 +942,6 @@ fun HomeScreen(
                         }
                     }
 
-                    // Green walking path icon
                     Box(
                         modifier = Modifier
                             .size(36.dp)
@@ -982,7 +959,7 @@ fun HomeScreen(
                 }
             }
 
-            // "Places you visited" Purple Gradient Card (from Mockup 1)
+            // "Places you visited" Purple Gradient Card
             Surface(
                 shape = RoundedCornerShape(22.dp),
                 color = AccentLavender,
