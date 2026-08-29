@@ -1,0 +1,42 @@
+package com.example
+
+import com.example.data.model.WalkRouteEntity
+import com.example.util.ArtworkShareHelper
+import org.junit.Assert.*
+import org.junit.Test
+
+class ExampleUnitTest {
+  @Test
+  fun addition_isCorrect() {
+    assertEquals(4, 2 + 2)
+  }
+
+  @Test
+  fun testShareCaptionFormat() {
+    val route = WalkRouteEntity(
+      id = 101L,
+      dateString = "23 February 2024",
+      isoDate = "2024-02-23",
+      steps = 4210,
+      distanceKm = 3.2,
+      durationMinutes = 45,
+      calories = 195,
+      title = "Botanical Loop",
+      shapeName = "Green Leaf Path",
+      shapeCategory = "Botanical Garden",
+      campusName = "IIT Delhi",
+      artStyle = "Pastel Bloom",
+      pointsJson = "[]",
+      blobsJson = "[]",
+      strokesJson = "[]"
+    )
+
+    val caption = ArtworkShareHelper.createShareCaption(route, "Aarav Sharma")
+    assertTrue(caption.contains("Green Leaf Path"))
+    assertTrue(caption.contains("IIT Delhi"))
+    assertTrue(caption.contains("4210"))
+    assertTrue(caption.contains("3.2 km"))
+    assertTrue(caption.contains("#PathCanvas"))
+  }
+}
+

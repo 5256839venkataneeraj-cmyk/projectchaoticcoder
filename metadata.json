@@ -1,0 +1,7 @@
+{
+  "name": "Campus Route-to-Art",
+  "description": "Gamifies daily campus walking by algorithmically converting GPS routes into collectible digital generative artwork.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
