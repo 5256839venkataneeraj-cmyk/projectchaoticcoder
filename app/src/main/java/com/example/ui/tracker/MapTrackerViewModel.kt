@@ -82,7 +82,8 @@ class MapTrackerViewModel(application: Application) : AndroidViewModel(applicati
                     val km = Math.round((calculatedDistanceMeters / 1000.0) * 100.0) / 100.0
                     val displacement = GpsDistanceCalculator.calculateDisplacementMeters(currentGpsList)
                     val formattedDist = GpsDistanceCalculator.formatDistance(calculatedDistanceMeters, _uiState.value.preferMetersUnit)
-                    val pace = GpsDistanceCalculator.calculatePaceFormatted(calculatedDistanceMeters, _uiState.value.durationSeconds)
+                    val currentDuration = if (update.sessionDurationSeconds > 0) update.sessionDurationSeconds else _uiState.value.durationSeconds
+                    val pace = GpsDistanceCalculator.calculatePaceFormatted(calculatedDistanceMeters, currentDuration)
                     val (shape, category) = RouteArtEngine.classifyShape(currentPoints, km)
 
                     _uiState.value = _uiState.value.copy(
@@ -94,6 +95,7 @@ class MapTrackerViewModel(application: Application) : AndroidViewModel(applicati
                         displacementMeters = displacement,
                         formattedDistanceText = formattedDist,
                         averagePaceText = pace,
+                        durationSeconds = currentDuration,
                         speedKmh = update.currentSpeedKmh,
                         isSpeedExceeded = update.currentSpeedKmh > 15.0,
                         isUsingRealGps = true,
@@ -102,6 +104,21 @@ class MapTrackerViewModel(application: Application) : AndroidViewModel(applicati
                         gpsAccuracyMeters = if (update.location.hasAccuracy()) update.location.accuracy else 0f,
                         detectedShapeName = shape,
                         detectedCategory = category
+                    )
+                }
+            }
+        }
+
+        // Collect continuous timer ticks and state from LocationService
+        viewModelScope.launch {
+            LocationService.serviceState.collect { sState ->
+                if (_uiState.value.isTracking && !_uiState.value.isSimulatingDemo && _uiState.value.isUsingRealGps) {
+                    val currentMeters = _uiState.value.distanceMeters
+                    val pace = if (currentMeters > 0) GpsDistanceCalculator.calculatePaceFormatted(currentMeters, sState.durationSeconds) else _uiState.value.averagePaceText
+                    _uiState.value = _uiState.value.copy(
+                        durationSeconds = sState.durationSeconds,
+                        isPaused = sState.isPaused,
+                        averagePaceText = pace
                     )
                 }
             }
@@ -217,25 +234,12 @@ class MapTrackerViewModel(application: Application) : AndroidViewModel(applicati
             isSimulatingDemo = false,
             showCompletionCelebration = false,
             newlyGeneratedRouteId = null,
-            isUsingRealGps = true
+            isUsingRealGps = true,
+            durationSeconds = 0
         )
 
         // Start FusedLocationProviderClient foreground service
         LocationService.start(getApplication())
-
-        timerJob?.cancel()
-        timerJob = viewModelScope.launch {
-            while (_uiState.value.isTracking && !_uiState.value.isPaused) {
-                delay(1000)
-                val currentSec = _uiState.value.durationSeconds + 1
-                // If not receiving GPS points yet, synthesize baseline duration
-                if (_uiState.value.walkPoints.isEmpty()) {
-                    _uiState.value = _uiState.value.copy(durationSeconds = currentSec)
-                } else {
-                    _uiState.value = _uiState.value.copy(durationSeconds = currentSec)
-                }
-            }
-        }
     }
 
     fun pauseTracking() {
@@ -246,7 +250,6 @@ class MapTrackerViewModel(application: Application) : AndroidViewModel(applicati
     fun resumeTracking() {
         _uiState.value = _uiState.value.copy(isPaused = false)
         LocationService.resume(getApplication())
-        startTracking()
     }
 
     fun addPoint(pt: PointF) {
@@ -329,6 +332,7 @@ class MapTrackerViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     fun finishWalkAndGenerateArt(onFinished: (Long) -> Unit) {
+        val serviceDurationSec = LocationService.serviceState.value.durationSeconds
         LocationService.stop(getApplication())
         timerJob?.cancel()
         viewModelScope.launch {
@@ -347,15 +351,20 @@ class MapTrackerViewModel(application: Application) : AndroidViewModel(applicati
 
             val steps = state.stepCount.coerceAtLeast(2400)
             val distance = state.distanceKm.coerceAtLeast(1.8)
-            val calories = (distance * 55).toInt()
-            val duration = (state.durationSeconds / 60).coerceAtLeast(25)
+            val calories = (distance * 55).toInt().coerceAtLeast(15)
+            val actualSeconds = if (serviceDurationSec > 0) serviceDurationSec else state.durationSeconds
+            val durationMinutes = if (actualSeconds > 0) {
+                ((actualSeconds + 30) / 60).coerceAtLeast(1)
+            } else {
+                1
+            }
 
             val newEntity = WalkRouteEntity(
                 dateString = dateFormat.format(now),
                 isoDate = isoFormat.format(now),
                 steps = steps,
                 distanceKm = distance,
-                durationMinutes = duration,
+                durationMinutes = durationMinutes,
                 calories = calories,
                 title = state.selectedPresetName,
                 shapeName = shapeName,

@@ -630,41 +630,44 @@ fun HomeScreen(
                                 }
 
                                 Text(
-                                    text = "Created from your ${todaysRoute.distanceKm} km journey",
+                                    text = "Created from your ${todaysRoute.distanceKm} km • ${todaysRoute.durationMinutes} min journey",
                                     style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
                                     color = TextMuted
                                 )
 
                                 Spacer(modifier = Modifier.height(2.dp))
 
-                                // Metrics Chips Row (Steps & Distance)
+                                // Metrics Chips Row (Steps, Distance & Duration)
                                 Row(
-                                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     // Steps
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        horizontalArrangement = Arrangement.spacedBy(5.dp)
                                     ) {
                                         Box(
                                             modifier = Modifier
-                                                .size(28.dp)
+                                                .size(26.dp)
                                                 .clip(CircleShape)
                                                 .background(AccentMintLight),
                                             contentAlignment = Alignment.Center
                                         ) {
-                                            Text(text = "👟", fontSize = 12.sp)
+                                            Text(text = "👟", fontSize = 11.sp)
                                         }
                                         Column {
                                             Text(
                                                 text = "${todaysRoute.steps}",
-                                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                                style = MaterialTheme.typography.labelLarge.copy(
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 13.sp
+                                                ),
                                                 color = DarkSlatePrimary
                                             )
                                             Text(
                                                 text = "steps",
-                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                                 color = TextMuted
                                             )
                                         }
@@ -673,26 +676,60 @@ fun HomeScreen(
                                     // Distance
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        horizontalArrangement = Arrangement.spacedBy(5.dp)
                                     ) {
                                         Box(
                                             modifier = Modifier
-                                                .size(28.dp)
+                                                .size(26.dp)
                                                 .clip(CircleShape)
                                                 .background(AccentMintLight),
                                             contentAlignment = Alignment.Center
                                         ) {
-                                            Text(text = "📍", fontSize = 12.sp)
+                                            Text(text = "📍", fontSize = 11.sp)
                                         }
                                         Column {
                                             Text(
                                                 text = "${todaysRoute.distanceKm}",
-                                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                                style = MaterialTheme.typography.labelLarge.copy(
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 13.sp
+                                                ),
                                                 color = DarkSlatePrimary
                                             )
                                             Text(
                                                 text = "km",
-                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                                color = TextMuted
+                                            )
+                                        }
+                                    }
+
+                                    // Duration
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(26.dp)
+                                                .clip(CircleShape)
+                                                .background(AccentLavenderContainer),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(text = "⏱️", fontSize = 11.sp)
+                                        }
+                                        Column {
+                                            Text(
+                                                text = "${todaysRoute.durationMinutes}m",
+                                                style = MaterialTheme.typography.labelLarge.copy(
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 13.sp
+                                                ),
+                                                color = DarkSlatePrimary
+                                            )
+                                            Text(
+                                                text = "time",
+                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                                 color = TextMuted
                                             )
                                         }

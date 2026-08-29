@@ -36,7 +36,16 @@ class ExampleUnitTest {
     assertTrue(caption.contains("IIT Delhi"))
     assertTrue(caption.contains("4210"))
     assertTrue(caption.contains("3.2 km"))
+    assertTrue(caption.contains("45 min"))
     assertTrue(caption.contains("#PathCanvas"))
+  }
+
+  @Test
+  fun testLocationServiceDurationFormatting() {
+    assertEquals("00:00", com.example.service.LocationService.formatDuration(0))
+    assertEquals("00:45", com.example.service.LocationService.formatDuration(45))
+    assertEquals("05:30", com.example.service.LocationService.formatDuration(330))
+    assertEquals("01:15:00", com.example.service.LocationService.formatDuration(4500))
   }
 }
 

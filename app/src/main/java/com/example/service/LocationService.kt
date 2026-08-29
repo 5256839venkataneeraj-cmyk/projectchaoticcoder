@@ -26,14 +26,17 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -43,12 +46,15 @@ data class WalkLocationUpdate(
     val totalDistanceMeters: Double,
     val currentSpeedKmh: Double,
     val estimatedSteps: Int,
+    val sessionDurationSeconds: Int = 0,
     val timestamp: Long = System.currentTimeMillis()
 )
 
 data class LocationServiceState(
     val isRunning: Boolean = false,
     val isPaused: Boolean = false,
+    val durationSeconds: Int = 0,
+    val formattedDuration: String = "00:00",
     val lastLocation: Location? = null,
     val pointsCount: Int = 0,
     val totalDistanceMeters: Double = 0.0,
@@ -62,9 +68,11 @@ class LocationService : Service() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
+    private var timerJob: Job? = null
 
     private var previousLocation: Location? = null
     private var totalDistanceAccumulated = 0.0
+    private var sessionDurationSeconds = 0
     private var baseLat: Double? = null
     private var baseLng: Double? = null
     private var isPaused = false
@@ -83,6 +91,17 @@ class LocationService : Service() {
 
         private val _locationUpdates = MutableSharedFlow<WalkLocationUpdate>(extraBufferCapacity = 64)
         val locationUpdates: SharedFlow<WalkLocationUpdate> = _locationUpdates.asSharedFlow()
+
+        fun formatDuration(seconds: Int): String {
+            val hrs = seconds / 3600
+            val mins = (seconds % 3600) / 60
+            val secs = seconds % 60
+            return if (hrs > 0) {
+                String.format("%02d:%02d:%02d", hrs, mins, secs)
+            } else {
+                String.format("%02d:%02d", mins, secs)
+            }
+        }
 
         fun start(context: Context) {
             val intent = Intent(context, LocationService::class.java).apply {
@@ -133,12 +152,12 @@ class LocationService : Service() {
             ACTION_PAUSE -> {
                 isPaused = true
                 _serviceState.value = _serviceState.value.copy(isPaused = true)
-                updateNotification("Walk Tracking Paused", "Tap to resume turning steps into art")
+                updateNotification("Walk Tracking Paused • ${formatDuration(sessionDurationSeconds)}", "Tap to resume turning steps into art")
             }
             ACTION_RESUME -> {
                 isPaused = false
                 _serviceState.value = _serviceState.value.copy(isPaused = false)
-                updateNotification("Live Walk Tracking Active", "Creating generative route art...")
+                updateNotification("Live Walk: ${formatDuration(sessionDurationSeconds)}", "Creating generative route art...")
             }
             ACTION_STOP -> {
                 stopTracking()
@@ -147,6 +166,31 @@ class LocationService : Service() {
             }
         }
         return START_STICKY
+    }
+
+    private fun startSessionTimer() {
+        timerJob?.cancel()
+        timerJob = serviceScope.launch {
+            while (isActive) {
+                delay(1000L)
+                if (!isPaused) {
+                    sessionDurationSeconds++
+                    val formatted = formatDuration(sessionDurationSeconds)
+                    _serviceState.value = _serviceState.value.copy(
+                        durationSeconds = sessionDurationSeconds,
+                        formattedDuration = formatted
+                    )
+                    if (sessionDurationSeconds % 5 == 0 || sessionDurationSeconds <= 3) {
+                        val km = Math.round((totalDistanceAccumulated / 1000.0) * 100.0) / 100.0
+                        val estimatedSteps = (totalDistanceAccumulated / 0.72).roundToInt()
+                        updateNotification(
+                            title = "Live Walk: $km km • $formatted",
+                            content = "$estimatedSteps steps • Transforming movement into route art"
+                        )
+                    }
+                }
+            }
+        }
     }
 
     private fun setupLocationCallback() {
@@ -200,13 +244,15 @@ class LocationService : Service() {
         val speedKmh = if (location.hasSpeed()) (location.speed * 3.6) else 0.0
         val estimatedSteps = (totalDistanceAccumulated / 0.72).roundToInt()
         val km = Math.round((totalDistanceAccumulated / 1000.0) * 100.0) / 100.0
+        val formattedTime = formatDuration(sessionDurationSeconds)
 
         val update = WalkLocationUpdate(
             location = location,
             point = point,
             totalDistanceMeters = totalDistanceAccumulated,
             currentSpeedKmh = Math.round(speedKmh * 10.0) / 10.0,
-            estimatedSteps = estimatedSteps
+            estimatedSteps = estimatedSteps,
+            sessionDurationSeconds = sessionDurationSeconds
         )
 
         serviceScope.launch {
@@ -217,6 +263,8 @@ class LocationService : Service() {
         _serviceState.value = LocationServiceState(
             isRunning = true,
             isPaused = isPaused,
+            durationSeconds = sessionDurationSeconds,
+            formattedDuration = formattedTime,
             lastLocation = location,
             pointsCount = updatedCount,
             totalDistanceMeters = totalDistanceAccumulated,
@@ -226,15 +274,27 @@ class LocationService : Service() {
         )
 
         updateNotification(
-            title = "Live Walk: $km km • $estimatedSteps steps",
-            content = "Transforming your live movement into generative canvas art"
+            title = "Live Walk: $km km • $formattedTime",
+            content = "$estimatedSteps steps • Transforming movement into route art"
         )
     }
 
     @SuppressLint("MissingPermission")
     private fun startForegroundTracking() {
+        sessionDurationSeconds = 0
+        totalDistanceAccumulated = 0.0
+        previousLocation = null
+        baseLat = null
+        baseLng = null
+        _serviceState.value = LocationServiceState(
+            isRunning = true,
+            isPaused = false,
+            durationSeconds = 0,
+            formattedDuration = "00:00"
+        )
+
         val notification = buildNotification(
-            title = "Live Walk Tracking Active",
+            title = "Live Walk Tracking Active • 00:00",
             content = "FusedLocationClient active • Mapping route art"
         )
 
@@ -243,6 +303,8 @@ class LocationService : Service() {
         } else {
             startForeground(NOTIFICATION_ID, notification)
         }
+
+        startSessionTimer()
 
         val locationRequest = LocationRequest.Builder(
             Priority.PRIORITY_HIGH_ACCURACY,
@@ -267,6 +329,8 @@ class LocationService : Service() {
     }
 
     private fun stopTracking() {
+        timerJob?.cancel()
+        timerJob = null
         try {
             fusedLocationClient.removeLocationUpdates(locationCallback)
         } catch (e: Exception) {
@@ -276,7 +340,8 @@ class LocationService : Service() {
         baseLat = null
         baseLng = null
         totalDistanceAccumulated = 0.0
-        _serviceState.value = LocationServiceState(isRunning = false, isPaused = false)
+        sessionDurationSeconds = 0
+        _serviceState.value = LocationServiceState(isRunning = false, isPaused = false, durationSeconds = 0, formattedDuration = "00:00")
     }
 
     private fun createNotificationChannel() {

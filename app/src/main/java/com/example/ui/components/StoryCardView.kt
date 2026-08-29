@@ -166,10 +166,10 @@ fun StoryCardView(
                     }
                 }
 
-                // Stats Row
+                // Stats Row: Steps, Distance, Duration
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Surface(
                         modifier = Modifier.weight(1f),
@@ -177,20 +177,23 @@ fun StoryCardView(
                         color = Color.White.copy(alpha = 0.9f)
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            Text(text = "👟", fontSize = 14.sp)
+                            Text(text = "👟", fontSize = 13.sp)
                             Column {
                                 Text(
                                     text = "${route.steps}",
-                                    style = MaterialTheme.typography.titleMedium,
+                                    style = MaterialTheme.typography.labelLarge.copy(
+                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                        fontSize = 13.sp
+                                    ),
                                     color = DarkSlatePrimary
                                 )
                                 Text(
                                     text = "steps",
-                                    style = MaterialTheme.typography.labelSmall,
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                     color = TextMuted
                                 )
                             }
@@ -203,20 +206,52 @@ fun StoryCardView(
                         color = Color.White.copy(alpha = 0.9f)
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            Text(text = "📍", fontSize = 14.sp)
+                            Text(text = "📍", fontSize = 13.sp)
                             Column {
                                 Text(
                                     text = "${route.distanceKm} km",
-                                    style = MaterialTheme.typography.titleMedium,
+                                    style = MaterialTheme.typography.labelLarge.copy(
+                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                        fontSize = 13.sp
+                                    ),
                                     color = DarkSlatePrimary
                                 )
                                 Text(
                                     text = "distance",
-                                    style = MaterialTheme.typography.labelSmall,
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                    color = TextMuted
+                                )
+                            }
+                        }
+                    }
+
+                    Surface(
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(14.dp),
+                        color = Color.White.copy(alpha = 0.9f)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(text = "⏱️", fontSize = 13.sp)
+                            Column {
+                                Text(
+                                    text = "${route.durationMinutes}m",
+                                    style = MaterialTheme.typography.labelLarge.copy(
+                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                        fontSize = 13.sp
+                                    ),
+                                    color = DarkSlatePrimary
+                                )
+                                Text(
+                                    text = "duration",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                     color = TextMuted
                                 )
                             }
